@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, type LucideIcon } from 'lucide-react-native';
-import { colors, radii, shadows, spacing } from '@kouskous/shared';
+import { colors, radii, shadows, spacing, toGreekUpperCase } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 
 /**
@@ -112,7 +112,7 @@ export function StatCard({ label, value, icon: Icon, tint }: StatCardProps) {
 
 /** Uppercase section label tinted with the dashboard's accent colour. */
 export function DashboardEyebrow({ children, accent }: { children: string; accent: string }) {
-  return <Text style={[styles.eyebrow, { color: accent }]}>{children.toUpperCase()}</Text>;
+  return <Text style={[styles.eyebrow, { color: accent }]}>{toGreekUpperCase(children)}</Text>;
 }
 
 export const dashboardStyles = StyleSheet.create({

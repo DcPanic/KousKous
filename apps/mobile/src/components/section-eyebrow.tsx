@@ -1,10 +1,10 @@
 import { StyleSheet, Text } from 'react-native';
-import { colors, spacing } from '@kouskous/shared';
+import { colors, spacing, toGreekUpperCase } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 
 /** Small uppercase label that introduces a screen section. */
 export function SectionEyebrow({ children }: { children: string }) {
-  return <Text style={styles.text}>{children.toUpperCase()}</Text>;
+  return <Text style={styles.text}>{toGreekUpperCase(children)}</Text>;
 }
 
 const styles = StyleSheet.create({

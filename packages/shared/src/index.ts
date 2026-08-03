@@ -1,3 +1,4 @@
+export * from './text';
 export * from './tokens';
 export * from './categories';
 export * from './locations';

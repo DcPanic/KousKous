@@ -32,6 +32,7 @@ import {
   layout,
   radii,
   shadows,
+  toGreekUpperCase,
   spacing,
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
@@ -155,7 +156,7 @@ export function DrawerMenu() {
 }
 
 function DrawerSection({ label }: { label: string }) {
-  return <Text style={styles.section}>{label.toUpperCase()}</Text>;
+  return <Text style={styles.section}>{toGreekUpperCase(label)}</Text>;
 }
 
 interface DrawerRowProps {
