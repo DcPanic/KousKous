@@ -1,0 +1,19 @@
+node_modules/
+dist/
+build/
+.expo/
+web-build/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Native build output
+ios/
+android/
+
+# Editor / OS
+.DS_Store
+*.log

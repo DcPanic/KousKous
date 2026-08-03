@@ -1,0 +1,20 @@
+{
+  "name": "kouskous",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "mobile": "npm run start --workspace @kouskous/mobile",
+    "mobile:tunnel": "npm run start --workspace @kouskous/mobile -- --tunnel",
+    "mobile:web": "npm run web --workspace @kouskous/mobile",
+    "admin": "npm run dev --workspace @kouskous/admin",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  }
+}

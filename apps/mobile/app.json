@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "KousKous",
+    "slug": "kouskous",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "kouskous",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FFF6F8",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.kouskous.app"
+    },
+    "android": {
+      "package": "com.kouskous.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFF6F8",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFF6F8",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 120
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
