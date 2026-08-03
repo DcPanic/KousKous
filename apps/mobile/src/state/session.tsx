@@ -37,8 +37,10 @@ const tierProfiles: Record<AccountTier, Partial<User>> = {
     is_paid_member: true,
     is_host: true,
     community_approved: true,
-    payment_verified: true,
-    payment_provider_account_id: 'viva_acc_demo',
+    // Approved by the community but not yet payment-verified — the state
+    // that shows the two gates are genuinely independent (spec §2.3).
+    payment_verified: false,
+    payment_provider_account_id: null,
   },
   official: {
     name: 'KousKous',

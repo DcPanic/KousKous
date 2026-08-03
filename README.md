@@ -75,13 +75,14 @@ npm run typecheck
 - Feed: stories, tabs, post cards, promo banners
 - Forums & Events με paywall overlay για free μέλη
 - Προφίλ με CTA ανά τύπο λογαριασμού
+- Host Dashboard: Επισκόπηση, Events, Πληρωμές, Reviews — με δικό του bottom nav
+- Official Dashboard: Επισκόπηση, Events, Rewards, Ανακοινώσεις
 - Admin panel: επισκόπηση + ουρά εγκρίσεων host
 
 Εκκρεμούν (βλ. roadmap §11 του master prompt):
 
 - Supabase auth, schema και πραγματικά δεδομένα — τώρα όλα είναι mock
-- Host Dashboard και Official Dashboard (υπάρχουν ως placeholder οθόνες)
-- Δημιουργία post, chat/DM, Rewards Club
+- Event detail, Δημιουργία post, Chat/DM, Rewards Club, Ρυθμίσεις
 - Συνδρομές και Viva Wallet Marketplace integration
 
 ## Preview τύπων λογαριασμού
