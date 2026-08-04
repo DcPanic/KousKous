@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Calendar, Users } from 'lucide-react-native';
 import { accessFor, colors, gradients, layout, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
@@ -13,6 +14,7 @@ import { SectionEyebrow } from '@/components/section-eyebrow';
 export default function EventsScreen() {
   const { user } = useSession();
   const { selectedLocations } = useAppState();
+  const router = useRouter();
   const locked = accessFor(user, 'events_view') === 'preview';
 
   const visibleEvents = useMemo(() => {
@@ -30,7 +32,16 @@ export default function EventsScreen() {
         <SectionEyebrow>Επερχόμενα Events</SectionEyebrow>
         <View style={styles.list}>
           {visibleEvents.map((event) => (
-            <View key={event.id} style={styles.card}>
+            <Pressable
+              key={event.id}
+              style={styles.card}
+              // Free members only get the blurred preview, so the card
+              // must not open the detail screen for them.
+              disabled={locked}
+              onPress={() => router.push({ pathname: '/event/[id]', params: { id: event.id } })}
+              accessibilityRole="button"
+              accessibilityLabel={event.title}
+            >
               <DiagonalGradient colors={gradients.eventCover} style={styles.cover} />
               <View style={styles.body}>
                 <Text style={styles.title}>{event.title}</Text>
@@ -43,7 +54,7 @@ export default function EventsScreen() {
                   <Text style={styles.meta}>{event.spots}</Text>
                 </View>
               </View>
-            </View>
+            </Pressable>
           ))}
 
           {visibleEvents.length === 0 ? (
