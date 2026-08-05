@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react';
 import {
   Animated,
-  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -61,7 +61,17 @@ export function DrawerMenu() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const width = Math.min(Dimensions.get('window').width * layout.drawerWidthRatio, layout.drawerMaxWidth);
+  // useWindowDimensions re-renders on resize, unlike a one-off
+  // Dimensions.get. Static web rendering has no window to measure and
+  // reports 0; falling back to the cap keeps the closed panel translated
+  // fully off-screen instead of collapsing to zero width and showing
+  // through at the left edge.
+  const { width: windowWidth } = useWindowDimensions();
+  const width =
+    windowWidth > 0
+      ? Math.min(windowWidth * layout.drawerWidthRatio, layout.drawerMaxWidth)
+      : layout.drawerMaxWidth;
+
   // Starts fully off-screen; the extra 5% keeps the shadow hidden too.
   const progress = useRef(new Animated.Value(0)).current;
 
@@ -245,6 +255,9 @@ const styles = StyleSheet.create({
     left: 0,
     backgroundColor: colors.surface,
     boxShadow: shadows.drawer,
+    // Belt and braces: content must never spill outside the panel, even
+    // if its width is measured as smaller than the content inside it.
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
