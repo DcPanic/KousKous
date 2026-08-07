@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   BarChart3,
+  Bookmark,
   ChevronRight,
   Gift,
   HelpCircle,
@@ -135,6 +136,8 @@ export function DrawerMenu() {
             </Pressable>
           ) : null}
 
+          <TierSwitcher />
+
           {categoryGroupOrder.map((group) => (
             <View key={group}>
               <DrawerSection label={categoryGroupLabels[group]} />
@@ -151,14 +154,20 @@ export function DrawerMenu() {
           ))}
 
           <DrawerSection label="Λογαριασμός" />
+          <DrawerRow
+            icon={Bookmark}
+            label="Αγαπημένα"
+            onPress={() => {
+              closeDrawer();
+              router.push('/saved');
+            }}
+          />
           <DrawerRow icon={Gift} label="Δώρα & Προσφορές" />
           <DrawerRow icon={UserPlus} label="Φίλες" />
           <DrawerRow icon={Sparkles} label="Γίνε Premium Host" />
           <DrawerRow icon={Settings} label="Ρυθμίσεις" />
           <DrawerRow icon={HelpCircle} label="Βοήθεια" />
           <DrawerRow icon={LogOut} label="Αποσύνδεση" />
-
-          <TierSwitcher />
         </ScrollView>
       </Animated.View>
     </View>
@@ -175,11 +184,17 @@ interface DrawerRowProps {
   label: string;
   following?: boolean;
   onToggle?: () => void;
+  onPress?: () => void;
 }
 
-function DrawerRow({ emoji, icon: Icon, label, following, onToggle }: DrawerRowProps) {
+function DrawerRow({ emoji, icon: Icon, label, following, onToggle, onPress }: DrawerRowProps) {
   return (
-    <View style={styles.row}>
+    <Pressable
+      style={styles.row}
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+    >
       {emoji ? (
         <Text style={styles.rowEmoji}>{emoji}</Text>
       ) : Icon ? (
@@ -198,7 +213,7 @@ function DrawerRow({ emoji, icon: Icon, label, following, onToggle }: DrawerRowP
           </Text>
         </Pressable>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 
@@ -357,9 +372,9 @@ const styles = StyleSheet.create({
     color: colors.pinkDark,
   },
   switcher: {
-    marginTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   switcherRow: {
     flexDirection: 'row',

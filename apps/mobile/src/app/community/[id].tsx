@@ -2,21 +2,22 @@ import { useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, BadgeCheck, Heart, MessageCircle, Pin, Plus } from 'lucide-react-native';
 import {
-  can,
-  colors,
-  findCategory,
-  findLocation,
-  radii,
-  shadows,
-  spacing,
-} from '@kouskous/shared';
+  ArrowLeft,
+  BadgeCheck,
+  Bookmark,
+  Heart,
+  MessageCircle,
+  Pin,
+  Plus,
+} from 'lucide-react-native';
+import { can, colors, findCategory, findLocation, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { forumSortLabels, sortThreads, threadsForCategory, type ForumSort } from '@/data/forum';
 import { useAppState } from '@/state/app-state';
 import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
+import { AttachmentGrid } from '@/components/attachments';
 import { LocationFilterBar } from '@/components/location-filter-bar';
 import { PlaceholderScreen } from '@/components/placeholder-screen';
 
@@ -25,7 +26,15 @@ const SORTS: ForumSort[] = ['recent', 'popular', 'unanswered'];
 export default function CommunityForumScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useSession();
-  const { isFollowing, toggleFollow, selectedLocations } = useAppState();
+  const {
+    isFollowing,
+    toggleFollow,
+    selectedLocations,
+    createdThreads,
+    repliesFor,
+    isSaved,
+    toggleSaved,
+  } = useAppState();
   const router = useRouter();
   const [sort, setSort] = useState<ForumSort>('recent');
 
@@ -33,13 +42,15 @@ export default function CommunityForumScreen() {
 
   const threads = useMemo(() => {
     if (!category) return [];
-    const all = threadsForCategory(category.id);
+    // Threads started in this session sit alongside the seeded ones.
+    const mine = createdThreads.filter((thread) => thread.categoryId === category.id);
+    const all = [...mine, ...threadsForCategory(category.id)];
     const byLocation =
       selectedLocations.length === 0
         ? all
         : all.filter((thread) => selectedLocations.includes(thread.location));
     return sortThreads(byLocation, sort);
-  }, [category, selectedLocations, sort]);
+  }, [category, createdThreads, selectedLocations, sort]);
 
   if (!category) {
     return (
@@ -105,47 +116,73 @@ export default function CommunityForumScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-        {threads.map((thread) => (
-          <Pressable key={thread.id} style={styles.thread} accessibilityRole="button">
-            {thread.pinned ? (
-              <View style={styles.pinnedRow}>
-                <Pin size={11} color={colors.pink} />
-                <Text style={styles.pinnedLabel}>Καρφιτσωμένο</Text>
-              </View>
-            ) : null}
+        {threads.map((thread) => {
+          const saved = isSaved(thread.id);
+          const replyCount = thread.replies.length + repliesFor(thread.id).length;
 
-            <View style={styles.threadHeader}>
-              <Avatar size={30} />
-              <View style={styles.threadAuthor}>
-                <View style={styles.threadAuthorRow}>
-                  <Text style={styles.authorName}>{thread.author}</Text>
-                  {thread.verified ? (
-                    <BadgeCheck size={12} color={colors.pink} fill={colors.pinkTint} />
-                  ) : null}
+          return (
+            <Pressable
+              key={thread.id}
+              style={styles.thread}
+              onPress={() => router.push({ pathname: '/thread/[id]', params: { id: thread.id } })}
+              accessibilityRole="button"
+              accessibilityLabel={thread.title}
+            >
+              {thread.pinned ? (
+                <View style={styles.pinnedRow}>
+                  <Pin size={11} color={colors.pink} />
+                  <Text style={styles.pinnedLabel}>Καρφιτσωμένο</Text>
                 </View>
-                <Text style={styles.muted}>
-                  {findLocation(thread.location)?.name} · {thread.timeAgo}
-                </Text>
-              </View>
-            </View>
+              ) : null}
 
-            <Text style={styles.threadTitle}>{thread.title}</Text>
-            <Text style={styles.threadExcerpt} numberOfLines={2}>
-              {thread.excerpt}
-            </Text>
+              <View style={styles.threadHeader}>
+                <Avatar size={30} />
+                <View style={styles.threadAuthor}>
+                  <View style={styles.threadAuthorRow}>
+                    <Text style={styles.authorName}>{thread.author}</Text>
+                    {thread.verified ? (
+                      <BadgeCheck size={12} color={colors.pink} fill={colors.pinkTint} />
+                    ) : null}
+                  </View>
+                  <Text style={styles.muted}>
+                    {findLocation(thread.location)?.name} · {thread.timeAgo}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => toggleSaved(thread.id)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={saved ? 'Αφαίρεση από τα αγαπημένα' : 'Αποθήκευση'}
+                  accessibilityState={{ selected: saved }}
+                >
+                  <Bookmark
+                    size={16}
+                    color={saved ? colors.pink : colors.textMuted}
+                    fill={saved ? colors.pink : 'transparent'}
+                  />
+                </Pressable>
+              </View>
 
-            <View style={styles.threadStats}>
-              <View style={styles.stat}>
-                <MessageCircle size={14} color={colors.textMuted} />
-                <Text style={styles.statLabel}>{thread.replies}</Text>
+              <Text style={styles.threadTitle}>{thread.title}</Text>
+              <Text style={styles.threadExcerpt} numberOfLines={2}>
+                {thread.excerpt}
+              </Text>
+
+              <AttachmentGrid attachments={thread.attachments} height={130} />
+
+              <View style={styles.threadStats}>
+                <View style={styles.stat}>
+                  <MessageCircle size={14} color={colors.textMuted} />
+                  <Text style={styles.statLabel}>{replyCount}</Text>
+                </View>
+                <View style={styles.stat}>
+                  <Heart size={14} color={colors.textMuted} />
+                  <Text style={styles.statLabel}>{thread.likes}</Text>
+                </View>
               </View>
-              <View style={styles.stat}>
-                <Heart size={14} color={colors.textMuted} />
-                <Text style={styles.statLabel}>{thread.likes}</Text>
-              </View>
-            </View>
-          </Pressable>
-        ))}
+            </Pressable>
+          );
+        })}
 
         {threads.length === 0 ? (
           <View style={styles.empty}>
@@ -160,7 +197,13 @@ export default function CommunityForumScreen() {
       </ScrollView>
 
       {canPost ? (
-        <Pressable style={styles.newPost} accessibilityRole="button">
+        <Pressable
+          style={styles.newPost}
+          onPress={() =>
+            router.push({ pathname: '/new-thread', params: { categoryId: category.id } })
+          }
+          accessibilityRole="button"
+        >
           <Plus size={18} color={colors.white} strokeWidth={2.6} />
           <Text style={styles.newPostLabel}>Νέα συζήτηση</Text>
         </Pressable>
