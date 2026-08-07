@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { accessFor, colors, findCategory, layout, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
@@ -10,6 +11,7 @@ import { SectionEyebrow } from '@/components/section-eyebrow';
 export default function CommunitiesScreen() {
   const { user } = useSession();
   const { isFollowing, toggleFollow } = useAppState();
+  const router = useRouter();
   const access = accessFor(user, 'forums_view');
   const locked = access === 'preview';
 
@@ -29,7 +31,18 @@ export default function CommunitiesScreen() {
             const following = isFollowing(category.id);
 
             return (
-              <View key={category.id} style={styles.card}>
+              <Pressable
+                key={category.id}
+                style={styles.card}
+                // Free members see the grid only as a teaser, so the card
+                // must not open the forum for them.
+                disabled={locked}
+                onPress={() =>
+                  router.push({ pathname: '/community/[id]', params: { id: category.id } })
+                }
+                accessibilityRole="button"
+                accessibilityLabel={`Κοινότητα ${category.name}`}
+              >
                 <View style={styles.cardTop}>
                   <Text style={styles.emoji}>{category.emoji}</Text>
                   <Pressable
@@ -45,7 +58,7 @@ export default function CommunitiesScreen() {
                 </View>
                 <Text style={styles.name}>{category.name}</Text>
                 <Text style={styles.posts}>{forum.posts}</Text>
-              </View>
+              </Pressable>
             );
           })}
         </View>
