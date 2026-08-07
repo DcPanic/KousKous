@@ -8,8 +8,12 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import type { DatePreset, PriceBand } from '@kouskous/shared';
 import type { ForumReply, ForumThread } from '@/data/forum';
 import { loadStringList, saveStringList } from '@/lib/storage';
+
+/** Which screen's filters are being counted or cleared. */
+export type FilterSurface = 'feed' | 'forum' | 'events';
 
 const SAVED_KEY = 'savedThreads';
 const FOLLOWS_KEY = 'followedCategories';
@@ -31,9 +35,22 @@ interface AppStateValue {
   closeDrawer: () => void;
 
   /** Empty means "everywhere" — no filtering is applied. */
-  selectedLocations: string[];
-  toggleLocation: (id: string) => void;
-  clearLocations: () => void;
+  selectedPlaces: string[];
+  togglePlace: (id: string) => void;
+
+  /** Event-only filters, ignored by the feed and forums. */
+  eventCategoryIds: string[];
+  toggleEventCategory: (id: string) => void;
+  datePreset: DatePreset;
+  setDatePreset: (preset: DatePreset) => void;
+  priceBand: PriceBand;
+  setPriceBand: (band: PriceBand) => void;
+  availableOnly: boolean;
+  setAvailableOnly: (value: boolean) => void;
+
+  /** How many filters are currently narrowing the given surface. */
+  activeFilterCount: (surface: FilterSurface) => number;
+  clearFilters: (surface: FilterSurface) => void;
 
   followedCategories: string[];
   isFollowing: (categoryId: string) => boolean;
@@ -56,7 +73,11 @@ const AppStateContext = createContext<AppStateValue | null>(null);
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [selectedPlaces, setSelectedPlaces] = useState<string[]>([]);
+  const [eventCategoryIds, setEventCategoryIds] = useState<string[]>([]);
+  const [datePreset, setDatePreset] = useState<DatePreset>('any');
+  const [priceBand, setPriceBand] = useState<PriceBand>('any');
+  const [availableOnly, setAvailableOnly] = useState(false);
   const [followedCategories, setFollowedCategories] = useState<string[]>(DEFAULT_FOLLOWS);
   const [savedThreadIds, setSavedThreadIds] = useState<string[]>([]);
   const [createdThreads, setCreatedThreads] = useState<ForumThread[]>([]);
@@ -98,13 +119,42 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const openDrawer = useCallback(() => setDrawerOpen(true), []);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
-  const toggleLocation = useCallback((id: string) => {
-    setSelectedLocations((prev) =>
+  const togglePlace = useCallback((id: string) => {
+    setSelectedPlaces((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
   }, []);
 
-  const clearLocations = useCallback(() => setSelectedLocations([]), []);
+  const toggleEventCategory = useCallback((id: string) => {
+    setEventCategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  }, []);
+
+  const activeFilterCount = useCallback(
+    (surface: FilterSurface) => {
+      // Place is the only filter the feed and forums use; the rest are
+      // event concepts and would otherwise inflate their badge.
+      let count = selectedPlaces.length;
+      if (surface !== 'events') return count;
+
+      count += eventCategoryIds.length;
+      if (datePreset !== 'any') count += 1;
+      if (priceBand !== 'any') count += 1;
+      if (availableOnly) count += 1;
+      return count;
+    },
+    [selectedPlaces, eventCategoryIds, datePreset, priceBand, availableOnly],
+  );
+
+  const clearFilters = useCallback((surface: FilterSurface) => {
+    setSelectedPlaces([]);
+    if (surface !== 'events') return;
+    setEventCategoryIds([]);
+    setDatePreset('any');
+    setPriceBand('any');
+    setAvailableOnly(false);
+  }, []);
 
   const toggleFollow = useCallback((categoryId: string) => {
     setFollowedCategories((prev) =>
@@ -133,9 +183,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       drawerOpen,
       openDrawer,
       closeDrawer,
-      selectedLocations,
-      toggleLocation,
-      clearLocations,
+      selectedPlaces,
+      togglePlace,
+      eventCategoryIds,
+      toggleEventCategory,
+      datePreset,
+      setDatePreset,
+      priceBand,
+      setPriceBand,
+      availableOnly,
+      setAvailableOnly,
+      activeFilterCount,
+      clearFilters,
       followedCategories,
       isFollowing: (categoryId: string) => followedCategories.includes(categoryId),
       toggleFollow,
@@ -151,9 +210,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       drawerOpen,
       openDrawer,
       closeDrawer,
-      selectedLocations,
-      toggleLocation,
-      clearLocations,
+      selectedPlaces,
+      togglePlace,
+      eventCategoryIds,
+      toggleEventCategory,
+      datePreset,
+      priceBand,
+      availableOnly,
+      activeFilterCount,
+      clearFilters,
       followedCategories,
       toggleFollow,
       savedThreadIds,

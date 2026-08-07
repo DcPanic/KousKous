@@ -11,14 +11,23 @@ import {
   Pin,
   Plus,
 } from 'lucide-react-native';
-import { can, colors, findCategory, findLocation, radii, shadows, spacing } from '@kouskous/shared';
+import {
+  can,
+  colors,
+  findCategory,
+  findPlace,
+  matchesPlaces,
+  radii,
+  shadows,
+  spacing,
+} from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { forumSortLabels, sortThreads, threadsForCategory, type ForumSort } from '@/data/forum';
 import { useAppState } from '@/state/app-state';
 import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
 import { AttachmentGrid } from '@/components/attachments';
-import { LocationFilterBar } from '@/components/location-filter-bar';
+import { FilterBar } from '@/components/filter-bar';
 import { PlaceholderScreen } from '@/components/placeholder-screen';
 
 const SORTS: ForumSort[] = ['recent', 'popular', 'unanswered'];
@@ -29,7 +38,7 @@ export default function CommunityForumScreen() {
   const {
     isFollowing,
     toggleFollow,
-    selectedLocations,
+    selectedPlaces,
     createdThreads,
     repliesFor,
     isSaved,
@@ -45,12 +54,9 @@ export default function CommunityForumScreen() {
     // Threads started in this session sit alongside the seeded ones.
     const mine = createdThreads.filter((thread) => thread.categoryId === category.id);
     const all = [...mine, ...threadsForCategory(category.id)];
-    const byLocation =
-      selectedLocations.length === 0
-        ? all
-        : all.filter((thread) => selectedLocations.includes(thread.location));
+    const byLocation = all.filter((thread) => matchesPlaces(thread.location, selectedPlaces));
     return sortThreads(byLocation, sort);
-  }, [category, createdThreads, selectedLocations, sort]);
+  }, [category, createdThreads, selectedPlaces, sort]);
 
   if (!category) {
     return (
@@ -94,7 +100,7 @@ export default function CommunityForumScreen() {
       </View>
 
       {/* Location applies to forums as well as the feed and events. */}
-      <LocationFilterBar />
+      <FilterBar surface="forum" resultCount={threads.length} />
 
       <View style={styles.sorts}>
         {SORTS.map((key) => {
@@ -145,7 +151,7 @@ export default function CommunityForumScreen() {
                     ) : null}
                   </View>
                   <Text style={styles.muted}>
-                    {findLocation(thread.location)?.name} · {thread.timeAgo}
+                    {findPlace(thread.location)?.name} · {thread.timeAgo}
                   </Text>
                 </View>
                 <Pressable

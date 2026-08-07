@@ -1,3 +1,5 @@
+import { daysUntilSaturday, isoDaysFromNow } from '@/lib/date';
+
 /**
  * Placeholder content for the UI build.
  *
@@ -37,14 +39,6 @@ export interface MockPost {
 export interface MockForum {
   categoryId: string;
   posts: string;
-}
-
-export interface MockEvent {
-  id: string;
-  title: string;
-  date: string;
-  spots: string;
-  location: string;
 }
 
 export const stories: MockStory[] = [
@@ -124,34 +118,134 @@ export const forums: MockForum[] = [
   { categoryId: 'career', posts: '430 posts' },
 ];
 
+export interface MockEvent {
+  id: string;
+  title: string;
+  /** ISO date, so the date filter can compare properly. */
+  isoDate: string;
+  time: string;
+  spotsTaken: number;
+  spotsTotal: number;
+  price: number;
+  /** Place id — the most specific one the event belongs to. */
+  location: string;
+  categoryId: string;
+  isOfficial: boolean;
+}
+
+/**
+ * Dates are generated relative to today so the "Σήμερα" and
+ * "Σαββατοκύριακο" filters always have something to match in the preview.
+ * Real events will carry fixed dates from the database.
+ */
 export const events: MockEvent[] = [
   {
     id: 'e1',
     title: 'Wine Night στο Κολωνάκι',
-    date: 'Σάβ 9 Αυγ · 20:00',
-    spots: '12 θέσεις',
-    location: 'athens',
+    isoDate: isoDaysFromNow(daysUntilSaturday()),
+    time: '20:00',
+    spotsTaken: 18,
+    spotsTotal: 30,
+    price: 25,
+    location: 'kolonaki',
+    categoryId: 'drinks',
+    isOfficial: false,
   },
   {
     id: 'e2',
     title: 'Πρωινή Yoga στη Βουλιαγμένη',
-    date: 'Κυρ 10 Αυγ · 08:30',
-    spots: '6 θέσεις',
-    location: 'athens',
+    isoDate: isoDaysFromNow(daysUntilSaturday() + 1),
+    time: '08:30',
+    spotsTaken: 18,
+    spotsTotal: 24,
+    price: 15,
+    location: 'vouliagmeni',
+    categoryId: 'wellness',
+    isOfficial: false,
   },
   {
     id: 'e3',
     title: 'Brunch & Networking',
-    date: 'Σάβ 16 Αυγ · 11:00',
-    spots: '20 θέσεις',
+    isoDate: isoDaysFromNow(9),
+    time: '11:00',
+    spotsTaken: 12,
+    spotsTotal: 32,
+    price: 0,
     location: 'thessaloniki',
+    categoryId: 'networking',
+    isOfficial: true,
   },
   {
     id: 'e4',
     title: 'Sunset Yoga στη Λεμεσό',
-    date: 'Παρ 22 Αυγ · 19:00',
-    spots: '9 θέσεις',
+    isoDate: isoDaysFromNow(15),
+    time: '19:00',
+    spotsTaken: 6,
+    spotsTotal: 15,
+    price: 12,
     location: 'limassol',
+    categoryId: 'wellness',
+    isOfficial: false,
+  },
+  {
+    id: 'e5',
+    title: 'Καφές γνωριμίας στο Κολωνάκι',
+    isoDate: isoDaysFromNow(0),
+    time: '18:30',
+    spotsTaken: 7,
+    spotsTotal: 12,
+    price: 0,
+    location: 'kolonaki',
+    categoryId: 'food',
+    isOfficial: false,
+  },
+  {
+    id: 'e6',
+    title: 'Ημερήσια εκδρομή στη Χαλκιδική',
+    isoDate: isoDaysFromNow(1),
+    time: '07:30',
+    spotsTaken: 22,
+    spotsTotal: 22,
+    price: 45,
+    location: 'halkidiki',
+    categoryId: 'trip',
+    isOfficial: true,
+  },
+  {
+    id: 'e7',
+    title: 'Beach day στην Αγία Νάπα',
+    isoDate: isoDaysFromNow(daysUntilSaturday()),
+    time: '11:00',
+    spotsTaken: 9,
+    spotsTotal: 40,
+    price: 10,
+    location: 'ayia-napa',
+    categoryId: 'beach',
+    isOfficial: false,
+  },
+  {
+    id: 'e8',
+    title: 'Κεραμική για αρχάριες',
+    isoDate: isoDaysFromNow(4),
+    time: '17:00',
+    spotsTaken: 5,
+    spotsTotal: 10,
+    price: 28,
+    location: 'chania',
+    categoryId: 'workshop',
+    isOfficial: false,
+  },
+  {
+    id: 'e9',
+    title: 'Πεζοπορία στο φαράγγι',
+    isoDate: isoDaysFromNow(21),
+    time: '09:00',
+    spotsTaken: 4,
+    spotsTotal: 18,
+    price: 0,
+    location: 'ioannina',
+    categoryId: 'nature',
+    isOfficial: false,
   },
 ];
 

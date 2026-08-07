@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, layout, spacing } from '@kouskous/shared';
+import { colors, layout, matchesPlaces, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { posts } from '@/data/mock';
 import { useAppState } from '@/state/app-state';
+import { FilterBar } from '@/components/filter-bar';
 import { FeedTabs, type FeedTab } from '@/components/feed-tabs';
 import { PostCard } from '@/components/post-card';
 import { PromoBanners } from '@/components/promo-banners';
@@ -11,15 +12,16 @@ import { StoryRow } from '@/components/story-row';
 
 export default function FeedScreen() {
   const [tab, setTab] = useState<FeedTab>('foryou');
-  const { selectedLocations } = useAppState();
+  const { selectedPlaces } = useAppState();
 
-  const visiblePosts = useMemo(() => {
-    if (selectedLocations.length === 0) return posts;
-    return posts.filter((post) => selectedLocations.includes(post.location));
-  }, [selectedLocations]);
+  const visiblePosts = useMemo(
+    () => posts.filter((post) => matchesPlaces(post.location, selectedPlaces)),
+    [selectedPlaces],
+  );
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <FilterBar surface="feed" resultCount={visiblePosts.length} />
       <StoryRow />
       <FeedTabs value={tab} onChange={setTab} />
 
