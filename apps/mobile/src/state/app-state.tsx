@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { DatePreset, PriceBand } from '@kouskous/shared';
+import { emptyDateRange, hasDateRange, type DateRange, type PriceBand } from '@kouskous/shared';
 import type { ForumReply, ForumThread } from '@/data/forum';
 import { loadStringList, saveStringList } from '@/lib/storage';
 
@@ -41,8 +41,8 @@ interface AppStateValue {
   /** Event-only filters, ignored by the feed and forums. */
   eventCategoryIds: string[];
   toggleEventCategory: (id: string) => void;
-  datePreset: DatePreset;
-  setDatePreset: (preset: DatePreset) => void;
+  dateRange: DateRange;
+  setDateRange: (range: DateRange) => void;
   priceBand: PriceBand;
   setPriceBand: (band: PriceBand) => void;
   availableOnly: boolean;
@@ -75,7 +75,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedPlaces, setSelectedPlaces] = useState<string[]>([]);
   const [eventCategoryIds, setEventCategoryIds] = useState<string[]>([]);
-  const [datePreset, setDatePreset] = useState<DatePreset>('any');
+  const [dateRange, setDateRange] = useState<DateRange>(emptyDateRange);
   const [priceBand, setPriceBand] = useState<PriceBand>('any');
   const [availableOnly, setAvailableOnly] = useState(false);
   const [followedCategories, setFollowedCategories] = useState<string[]>(DEFAULT_FOLLOWS);
@@ -139,19 +139,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (surface !== 'events') return count;
 
       count += eventCategoryIds.length;
-      if (datePreset !== 'any') count += 1;
+      if (hasDateRange(dateRange)) count += 1;
       if (priceBand !== 'any') count += 1;
       if (availableOnly) count += 1;
       return count;
     },
-    [selectedPlaces, eventCategoryIds, datePreset, priceBand, availableOnly],
+    [selectedPlaces, eventCategoryIds, dateRange, priceBand, availableOnly],
   );
 
   const clearFilters = useCallback((surface: FilterSurface) => {
     setSelectedPlaces([]);
     if (surface !== 'events') return;
     setEventCategoryIds([]);
-    setDatePreset('any');
+    setDateRange(emptyDateRange);
     setPriceBand('any');
     setAvailableOnly(false);
   }, []);
@@ -187,8 +187,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       togglePlace,
       eventCategoryIds,
       toggleEventCategory,
-      datePreset,
-      setDatePreset,
+      dateRange,
+      setDateRange,
       priceBand,
       setPriceBand,
       availableOnly,
@@ -214,7 +214,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       togglePlace,
       eventCategoryIds,
       toggleEventCategory,
-      datePreset,
+      dateRange,
       priceBand,
       availableOnly,
       activeFilterCount,

@@ -32,25 +32,43 @@ export function findEventCategory(id: string): EventCategory | undefined {
   return eventCategories.find((category) => category.id === id);
 }
 
-export type DatePreset = 'any' | 'today' | 'tomorrow' | 'weekend' | 'week' | 'month';
+export interface DateRange {
+  /** ISO date, inclusive. Null means unbounded on that side. */
+  start: string | null;
+  end: string | null;
+}
 
-export const datePresetLabels: Record<DatePreset, string> = {
-  any: 'Οποτεδήποτε',
-  today: 'Σήμερα',
-  tomorrow: 'Αύριο',
-  weekend: 'Σαββατοκύριακο',
-  week: 'Αυτή την εβδομάδα',
-  month: 'Αυτόν τον μήνα',
-};
+export const emptyDateRange: DateRange = { start: null, end: null };
 
-export const datePresetOrder: DatePreset[] = [
-  'any',
-  'today',
-  'tomorrow',
-  'weekend',
-  'week',
-  'month',
-];
+export function hasDateRange(range: DateRange): boolean {
+  return range.start !== null || range.end !== null;
+}
+
+function dayNumber(iso: string): number {
+  const date = new Date(iso);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+/**
+ * Whether an event falls inside the chosen range, comparing whole days so
+ * an event later on the end date still counts.
+ *
+ * A single chosen day means exactly that day: picking a start without an
+ * end is a complete answer ("this Saturday"), not a half-finished one.
+ */
+export function matchesDateRange(isoDate: string, range: DateRange): boolean {
+  if (!hasDateRange(range)) return true;
+
+  const day = dayNumber(isoDate);
+  if (Number.isNaN(day)) return false;
+
+  const from = range.start ? dayNumber(range.start) : null;
+  const to = range.end ? dayNumber(range.end) : from;
+
+  if (from !== null && day < from) return false;
+  if (to !== null && day > to) return false;
+  return true;
+}
 
 export type PriceBand = 'any' | 'free' | 'upTo15' | 'upTo30' | 'over30';
 
@@ -77,48 +95,4 @@ export function matchesPrice(price: number, band: PriceBand): boolean {
     default:
       return true;
   }
-}
-
-function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function addDays(date: Date, days: number): Date {
-  const copy = new Date(date);
-  copy.setDate(copy.getDate() + days);
-  return copy;
-}
-
-/**
- * Whether an ISO date falls inside the preset, measured against `today`
- * so the caller controls "now" and the result stays testable.
- *
- * The weekend runs to Sunday inclusive; asking on a Saturday should still
- * return that same weekend rather than the next one.
- */
-export function matchesDatePreset(isoDate: string, preset: DatePreset, today = new Date()): boolean {
-  if (preset === 'any') return true;
-
-  const day = startOfDay(new Date(isoDate));
-  if (Number.isNaN(day.getTime())) return false;
-
-  const base = startOfDay(today);
-
-  if (preset === 'today') return day.getTime() === base.getTime();
-  if (preset === 'tomorrow') return day.getTime() === addDays(base, 1).getTime();
-
-  if (preset === 'weekend') {
-    // getDay: 0 Sunday … 6 Saturday.
-    const weekday = base.getDay();
-    const daysUntilSaturday = weekday === 0 ? 0 : 6 - weekday;
-    const saturday = weekday === 0 ? addDays(base, -1) : addDays(base, daysUntilSaturday);
-    const sunday = addDays(saturday, 1);
-    return day >= saturday && day <= sunday;
-  }
-
-  if (preset === 'week') {
-    return day >= base && day <= addDays(base, 7);
-  }
-
-  return day >= base && day <= addDays(base, 31);
 }

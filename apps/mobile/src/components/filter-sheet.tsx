@@ -13,8 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Check, MapPin, Search, X } from 'lucide-react-native';
 import {
   colors,
-  datePresetLabels,
-  datePresetOrder,
+  emptyDateRange,
+  hasDateRange,
   eventCategories,
   findPlace,
   placeBreadcrumb,
@@ -31,6 +31,8 @@ import {
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { useAppState, type FilterSurface } from '@/state/app-state';
+import { formatShortDate } from '@/lib/date';
+import { DateRangeCalendar } from './date-range-calendar';
 
 interface FilterSheetProps {
   visible: boolean;
@@ -51,8 +53,8 @@ export function FilterSheet({ visible, onClose, surface, resultCount }: FilterSh
     togglePlace,
     eventCategoryIds,
     toggleEventCategory,
-    datePreset,
-    setDatePreset,
+    dateRange,
+    setDateRange,
     priceBand,
     setPriceBand,
     availableOnly,
@@ -217,23 +219,41 @@ export function FilterSheet({ visible, onClose, surface, resultCount }: FilterSh
             {isEvents ? (
               <>
                 <SectionTitle>Πότε</SectionTitle>
-                <View style={styles.chipWrap}>
-                  {datePresetOrder.map((preset) => {
-                    const selected = preset === datePreset;
-                    return (
-                      <Pressable
-                        key={preset}
-                        onPress={() => setDatePreset(preset)}
-                        style={[styles.chip, selected && styles.chipActive]}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected }}
-                      >
-                        <Text style={[styles.chipLabel, selected && styles.chipLabelActive]}>
-                          {datePresetLabels[preset]}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
+                <View style={styles.dateModes}>
+                  <Pressable
+                    onPress={() => setDateRange(emptyDateRange)}
+                    style={[styles.chip, !hasDateRange(dateRange) && styles.chipActive]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: !hasDateRange(dateRange) }}
+                  >
+                    <Text
+                      style={[
+                        styles.chipLabel,
+                        !hasDateRange(dateRange) && styles.chipLabelActive,
+                      ]}
+                    >
+                      Όλες τις μέρες
+                    </Text>
+                  </Pressable>
+
+                  {hasDateRange(dateRange) ? (
+                    <Pressable
+                      onPress={() => setDateRange(emptyDateRange)}
+                      style={styles.chosenChip}
+                      accessibilityRole="button"
+                      accessibilityLabel="Καθαρισμός ημερομηνιών"
+                    >
+                      <Text style={styles.chosenLabel}>
+                        {dateRange.start ? formatShortDate(dateRange.start) : ''}
+                        {dateRange.end ? ` – ${formatShortDate(dateRange.end)}` : ''}
+                      </Text>
+                      <X size={12} color={colors.pinkDark} />
+                    </Pressable>
+                  ) : null}
+                </View>
+
+                <View style={styles.calendarWrap}>
+                  <DateRangeCalendar range={dateRange} onChange={setDateRange} />
                 </View>
 
                 <SectionTitle>Είδος</SectionTitle>
@@ -494,6 +514,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 7,
+  },
+  dateModes: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 7,
+  },
+  calendarWrap: {
+    marginTop: spacing.md,
   },
   regionBlock: {
     marginBottom: spacing.lg,

@@ -34,3 +34,10 @@ export function daysUntilSaturday(today = new Date()): number {
   const weekday = today.getDay();
   return weekday === 6 ? 0 : (6 - weekday + 7) % 7;
 }
+
+/** "9 Αυγ" — compact form used in the date-range summary. */
+export function formatShortDate(isoDate: string): string {
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return '';
+  return `${date.getDate()} ${MONTHS[date.getMonth()]}`;
+}

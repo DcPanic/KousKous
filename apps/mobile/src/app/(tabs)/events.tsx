@@ -9,7 +9,7 @@ import {
   findPlace,
   gradients,
   layout,
-  matchesDatePreset,
+  matchesDateRange,
   matchesPlaces,
   matchesPrice,
   radii,
@@ -28,7 +28,7 @@ import { SectionEyebrow } from '@/components/section-eyebrow';
 
 export default function EventsScreen() {
   const { user } = useSession();
-  const { selectedPlaces, eventCategoryIds, datePreset, priceBand, availableOnly } = useAppState();
+  const { selectedPlaces, eventCategoryIds, dateRange, priceBand, availableOnly } = useAppState();
   const router = useRouter();
   const locked = accessFor(user, 'events_view') === 'preview';
 
@@ -36,7 +36,7 @@ export default function EventsScreen() {
     () =>
       events
         .filter((event) => matchesPlaces(event.location, selectedPlaces))
-        .filter((event) => matchesDatePreset(event.isoDate, datePreset))
+        .filter((event) => matchesDateRange(event.isoDate, dateRange))
         .filter(
           (event) =>
             eventCategoryIds.length === 0 || eventCategoryIds.includes(event.categoryId),
@@ -44,7 +44,7 @@ export default function EventsScreen() {
         .filter((event) => matchesPrice(event.price, priceBand))
         .filter((event) => !availableOnly || event.spotsTaken < event.spotsTotal)
         .sort((a, b) => a.isoDate.localeCompare(b.isoDate)),
-    [selectedPlaces, eventCategoryIds, datePreset, priceBand, availableOnly],
+    [selectedPlaces, eventCategoryIds, dateRange, priceBand, availableOnly],
   );
 
   return (
