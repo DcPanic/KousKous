@@ -5,12 +5,14 @@ import { ArrowLeft, BadgeCheck, MessageSquareText } from 'lucide-react-native';
 import { can, colors, findPlace, paidMemberCta, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { conversations } from '@/data/chat';
+import { useAppState } from '@/state/app-state';
 import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
 
 export default function ChatListScreen() {
   const router = useRouter();
   const { user } = useSession();
+  const { readConversationIds, markConversationRead } = useAppState();
   const allowed = can(user, 'chat');
 
   return (
@@ -29,13 +31,19 @@ export default function ChatListScreen() {
 
       {allowed ? (
         <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-          {conversations.map((conversation) => (
+          {conversations.map((conversation) => {
+            const unread = readConversationIds.includes(conversation.id)
+              ? 0
+              : conversation.unread;
+
+            return (
             <Pressable
               key={conversation.id}
               style={styles.row}
-              onPress={() =>
-                router.push({ pathname: '/chat/[id]', params: { id: conversation.id } })
-              }
+              onPress={() => {
+                markConversationRead(conversation.id);
+                router.push({ pathname: '/chat/[id]', params: { id: conversation.id } });
+              }}
               accessibilityRole="button"
               accessibilityLabel={`Συνομιλία με ${conversation.name}`}
             >
@@ -55,7 +63,7 @@ export default function ChatListScreen() {
                   <Text style={styles.time}>{conversation.lastTime}</Text>
                 </View>
                 <Text
-                  style={[styles.preview, conversation.unread > 0 && styles.previewUnread]}
+                  style={[styles.preview, unread > 0 && styles.previewUnread]}
                   numberOfLines={1}
                 >
                   {conversation.lastMessage}
@@ -63,13 +71,14 @@ export default function ChatListScreen() {
                 <Text style={styles.place}>{findPlace(conversation.location)?.name}</Text>
               </View>
 
-              {conversation.unread > 0 ? (
+              {unread > 0 ? (
                 <View style={styles.unread}>
-                  <Text style={styles.unreadLabel}>{conversation.unread}</Text>
+                  <Text style={styles.unreadLabel}>{unread}</Text>
                 </View>
               ) : null}
             </Pressable>
-          ))}
+            );
+          })}
         </ScrollView>
       ) : (
         <View style={styles.locked}>

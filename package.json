@@ -14,7 +14,7 @@
     "mobile:tunnel": "npm run start --workspace @kouskous/mobile -- --tunnel",
     "mobile:web": "npm run web --workspace @kouskous/mobile",
     "admin": "npm run dev --workspace @kouskous/admin",
-    "build:preview": "cd apps/mobile && KOUSKOUS_BASE_URL=/KousKous npx expo export --platform web --output-dir ../../docs && touch ../../docs/.nojekyll && cd ../.. && node scripts/make-404.mjs",
+    "build:preview": "cd apps/mobile && KOUSKOUS_BASE_URL=/KousKous EXPO_PUBLIC_BASE_URL=/KousKous npx expo export --platform web --output-dir ../../docs && touch ../../docs/.nojekyll && cd ../.. && node scripts/make-404.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"
   }

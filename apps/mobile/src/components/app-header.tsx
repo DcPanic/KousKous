@@ -3,12 +3,10 @@ import { Bell, Menu, MessageSquareText, Plus, Search } from 'lucide-react-native
 import { useRouter } from 'expo-router';
 import { colors, fontSizes, radii, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { totalUnread } from '@/data/chat';
-import { unreadNotifications } from '@/data/notifications';
 import { useAppState } from '@/state/app-state';
 
 export function AppHeader() {
-  const { openDrawer } = useAppState();
+  const { openDrawer, unreadNotificationCount, unreadMessageCount } = useAppState();
   const router = useRouter();
 
   return (
@@ -24,9 +22,9 @@ export function AppHeader() {
           accessibilityLabel="Ειδοποιήσεις"
         >
           <Bell size={21} color={colors.text} strokeWidth={1.8} />
-          {unreadNotifications > 0 ? (
+          {unreadNotificationCount > 0 ? (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{unreadNotifications}</Text>
+              <Text style={styles.badgeText}>{unreadNotificationCount}</Text>
             </View>
           ) : null}
         </Pressable>
@@ -53,9 +51,9 @@ export function AppHeader() {
           accessibilityLabel="Μηνύματα"
         >
           <MessageSquareText size={21} color={colors.text} strokeWidth={1.8} />
-          {totalUnread > 0 ? (
+          {unreadMessageCount > 0 ? (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{totalUnread}</Text>
+              <Text style={styles.badgeText}>{unreadMessageCount}</Text>
             </View>
           ) : null}
         </Pressable>

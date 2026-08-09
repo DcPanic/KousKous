@@ -13,6 +13,7 @@ import {
 import { colors, radii, shadows, spacing, toGreekUpperCase } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { notifications, type AppNotification, type NotificationKind } from '@/data/notifications';
+import { useAppState } from '@/state/app-state';
 import { Avatar } from '@/components/avatar';
 
 /** Icon and tint per kind, so the list is scannable without reading it. */
@@ -37,11 +38,22 @@ function isRecent(notification: AppNotification): boolean {
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const {
+    readNotificationIds,
+    unreadNotificationCount,
+    markNotificationRead,
+    markAllNotificationsRead,
+  } = useAppState();
 
   const recent = notifications.filter(isRecent);
   const earlier = notifications.filter((notification) => !isRecent(notification));
 
+  const isUnread = (notification: AppNotification) =>
+    !notification.read && !readNotificationIds.includes(notification.id);
+
   const open = (notification: AppNotification) => {
+    markNotificationRead(notification.id);
+
     const target = notification.target;
     if (!target) return;
 
@@ -64,15 +76,15 @@ export default function NotificationsScreen() {
         <Text style={styles.groupLabel}>{toGreekUpperCase(label)}</Text>
         {items.map((notification) => {
           const { Icon, tint } = ICONS[notification.kind];
-          const tappable = notification.target !== null;
+          const unread = isUnread(notification);
 
           return (
             <Pressable
               key={notification.id}
               onPress={() => open(notification)}
-              disabled={!tappable}
-              style={[styles.row, !notification.read && styles.rowUnread]}
-              accessibilityRole={tappable ? 'button' : 'text'}
+              style={[styles.row, unread && styles.rowUnread]}
+              accessibilityRole="button"
+              accessibilityLabel={unread ? 'Αδιάβαστη ειδοποίηση' : undefined}
             >
               <View>
                 {notification.actor ? (
@@ -99,7 +111,7 @@ export default function NotificationsScreen() {
                 <Text style={styles.time}>{notification.timeAgo}</Text>
               </View>
 
-              {!notification.read ? <View style={styles.unreadDot} /> : null}
+              {unread ? <View style={styles.unreadDot} /> : null}
             </Pressable>
           );
         })}
@@ -119,6 +131,15 @@ export default function NotificationsScreen() {
           <ArrowLeft size={17} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Ειδοποιήσεις</Text>
+        {unreadNotificationCount > 0 ? (
+          <Pressable
+            onPress={markAllNotificationsRead}
+            style={styles.markAll}
+            accessibilityRole="button"
+          >
+            <Text style={styles.markAllLabel}>Όλα ως διαβασμένα</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
@@ -152,9 +173,23 @@ const styles = StyleSheet.create({
     boxShadow: shadows.card,
   },
   headerTitle: {
+    flex: 1,
     fontSize: 16,
     fontFamily: font.extrabold,
     color: colors.text,
+  },
+  markAll: {
+    borderRadius: radii.full,
+    borderWidth: 1.3,
+    borderColor: colors.borderChip,
+    backgroundColor: colors.surface,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.md,
+  },
+  markAllLabel: {
+    fontSize: 10.5,
+    fontFamily: font.bold,
+    color: colors.pink,
   },
   list: {
     paddingHorizontal: spacing.screen,

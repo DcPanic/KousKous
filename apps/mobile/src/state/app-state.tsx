@@ -10,15 +10,14 @@ import {
 } from 'react';
 import { emptyDateRange, hasDateRange, type DateRange, type PriceBand } from '@kouskous/shared';
 import type { ForumReply, ForumThread } from '@/data/forum';
-import type { ChatMessage } from '@/data/chat';
+import { conversations, type ChatMessage } from '@/data/chat';
+import { notifications } from '@/data/notifications';
 import type { MockComment, MockPost } from '@/data/mock';
-import { loadStringList, saveStringList } from '@/lib/storage';
+import { usePersistedStringList } from '@/lib/use-persisted-list';
 
 /** Which screen's filters are being counted or cleared. */
 export type FilterSurface = 'feed' | 'forum' | 'events';
 
-const SAVED_KEY = 'savedThreads';
-const FOLLOWS_KEY = 'followedCategories';
 const DEFAULT_FOLLOWS = ['beauty', 'travel'];
 
 /**
@@ -100,6 +99,17 @@ interface AppStateValue {
   /** Messages sent in this session, per conversation. */
   sentMessages: (conversationId: string) => ChatMessage[];
   sendMessage: (conversationId: string, message: ChatMessage) => void;
+
+  /** Notifications she has already seen, and the resulting badge count. */
+  readNotificationIds: string[];
+  unreadNotificationCount: number;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
+
+  /** Conversations she has opened, and the resulting badge count. */
+  readConversationIds: string[];
+  unreadMessageCount: number;
+  markConversationRead: (id: string) => void;
 }
 
 const AppStateContext = createContext<AppStateValue | null>(null);
@@ -111,51 +121,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [dateRange, setDateRange] = useState<DateRange>(emptyDateRange);
   const [priceBand, setPriceBand] = useState<PriceBand>('any');
   const [availableOnly, setAvailableOnly] = useState(false);
-  const [followedCategories, setFollowedCategories] = useState<string[]>(DEFAULT_FOLLOWS);
-  const [savedThreadIds, setSavedThreadIds] = useState<string[]>([]);
-  const [joinedEventIds, setJoinedEventIds] = useState<string[]>([]);
-  const [likedPostIds, setLikedPostIds] = useState<string[]>([]);
-  const [savedPostIds, setSavedPostIds] = useState<string[]>([]);
-  const [blockedNames, setBlockedNames] = useState<string[]>([]);
-  const [reportedPostIds, setReportedPostIds] = useState<string[]>([]);
+  // Everything below outlives a reload; the rest is session content that
+  // belongs in the database once it exists.
+  const [followedCategories, setFollowedCategories] = usePersistedStringList(
+    'followedCategories',
+    DEFAULT_FOLLOWS,
+  );
+  const [savedThreadIds, setSavedThreadIds] = usePersistedStringList('savedThreads');
+  const [joinedEventIds, setJoinedEventIds] = usePersistedStringList('joinedEvents');
+  const [likedPostIds, setLikedPostIds] = usePersistedStringList('likedPosts');
+  const [savedPostIds, setSavedPostIds] = usePersistedStringList('savedPosts');
+  const [blockedNames, setBlockedNames] = usePersistedStringList('blockedNames');
+  const [reportedPostIds, setReportedPostIds] = usePersistedStringList('reportedPosts');
+  const [readNotificationIds, setReadNotificationIds] = usePersistedStringList('readNotifications');
+  const [readConversationIds, setReadConversationIds] = usePersistedStringList('readConversations');
   const [createdThreads, setCreatedThreads] = useState<ForumThread[]>([]);
   const [createdPosts, setCreatedPosts] = useState<MockPost[]>([]);
   const [replies, setReplies] = useState<Record<string, ForumReply[]>>({});
   const [comments, setComments] = useState<Record<string, MockComment[]>>({});
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
-
-  // Restore preferences once, then mirror every later change back to
-  // storage. The guard stops the first write from clobbering what was
-  // just read.
-  const restored = useRef(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    void (async () => {
-      const [saved, follows] = await Promise.all([
-        loadStringList(SAVED_KEY),
-        loadStringList(FOLLOWS_KEY),
-      ]);
-      if (cancelled) return;
-
-      if (saved) setSavedThreadIds(saved);
-      if (follows) setFollowedCategories(follows);
-      restored.current = true;
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (restored.current) void saveStringList(SAVED_KEY, savedThreadIds);
-  }, [savedThreadIds]);
-
-  useEffect(() => {
-    if (restored.current) void saveStringList(FOLLOWS_KEY, followedCategories);
-  }, [followedCategories]);
 
   const openDrawer = useCallback(() => setDrawerOpen(true), []);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
@@ -255,6 +239,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setReplies((prev) => ({ ...prev, [threadId]: [...(prev[threadId] ?? []), reply] }));
   }, []);
 
+  const markNotificationRead = useCallback((id: string) => {
+    setReadNotificationIds((prev) => (prev.includes(id) ? prev : [id, ...prev]));
+  }, [setReadNotificationIds]);
+
+  const markAllNotificationsRead = useCallback(() => {
+    setReadNotificationIds(notifications.map((notification) => notification.id));
+  }, [setReadNotificationIds]);
+
+  const markConversationRead = useCallback((id: string) => {
+    setReadConversationIds((prev) => (prev.includes(id) ? prev : [id, ...prev]));
+  }, [setReadConversationIds]);
+
+  const unreadNotificationCount = notifications.filter(
+    (notification) => !notification.read && !readNotificationIds.includes(notification.id),
+  ).length;
+
+  const unreadMessageCount = conversations
+    .filter((conversation) => !readConversationIds.includes(conversation.id))
+    .reduce((sum, conversation) => sum + conversation.unread, 0);
+
   const sendMessage = useCallback((conversationId: string, message: ChatMessage) => {
     setMessages((prev) => ({
       ...prev,
@@ -309,6 +313,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       addReply,
       sentMessages: (conversationId: string) => messages[conversationId] ?? [],
       sendMessage,
+      readNotificationIds,
+      unreadNotificationCount,
+      markNotificationRead,
+      markAllNotificationsRead,
+      readConversationIds,
+      unreadMessageCount,
+      markConversationRead,
     }),
     [
       drawerOpen,
@@ -347,6 +358,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       addReply,
       messages,
       sendMessage,
+      readNotificationIds,
+      unreadNotificationCount,
+      markNotificationRead,
+      markAllNotificationsRead,
+      readConversationIds,
+      unreadMessageCount,
+      markConversationRead,
     ],
   );
 

@@ -13,6 +13,7 @@ import {
   MapPin,
   Megaphone,
   MessageCircle,
+  Send,
   Star,
   Users,
 } from 'lucide-react-native';
@@ -29,6 +30,7 @@ import {
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { findEventDetail, type EventDetail } from '@/data/event-detail';
+import { linkTo, shareLink } from '@/lib/share';
 import { useAppState } from '@/state/app-state';
 import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
@@ -39,6 +41,7 @@ export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useSession();
   const { hasJoined, toggleJoined } = useAppState();
+  const [shareNote, setShareNote] = useState<string | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -67,18 +70,36 @@ export default function EventDetailScreen() {
       >
         <DiagonalGradient colors={gradients.eventCover} style={styles.cover}>
           <SafeAreaView edges={['top']}>
-            <Pressable
-              onPress={() => router.back()}
-              style={styles.back}
-              accessibilityRole="button"
-              accessibilityLabel="Πίσω"
-            >
-              <ArrowLeft size={18} color={colors.text} />
-            </Pressable>
+            <View style={styles.coverBar}>
+              <Pressable
+                onPress={() => router.back()}
+                style={styles.back}
+                accessibilityRole="button"
+                accessibilityLabel="Πίσω"
+              >
+                <ArrowLeft size={18} color={colors.text} />
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  void shareLink(
+                    `Έρχεσαι στο «${event.title}»;`,
+                    linkTo(`/event/${event.id}`),
+                  ).then((result) => {
+                    if (result === 'copied') setShareNote('Ο σύνδεσμος αντιγράφηκε');
+                  });
+                }}
+                style={styles.back}
+                accessibilityRole="button"
+                accessibilityLabel="Κοινοποίηση"
+              >
+                <Send size={17} color={colors.text} />
+              </Pressable>
+            </View>
           </SafeAreaView>
         </DiagonalGradient>
 
         <View style={styles.body}>
+          {shareNote ? <Text style={styles.shareNote}>{shareNote}</Text> : null}
           <Text style={styles.title}>{event.title}</Text>
 
           <View style={styles.hostRow}>
@@ -300,6 +321,17 @@ const styles = StyleSheet.create({
   cover: {
     height: 220,
     paddingHorizontal: spacing.screen,
+  },
+  coverBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  shareNote: {
+    fontSize: 11.5,
+    fontFamily: font.bold,
+    color: colors.success,
+    marginBottom: 4,
   },
   back: {
     width: 36,

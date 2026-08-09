@@ -7,12 +7,14 @@
  * `npm run mobile:web`, which serves from the root.
  */
 module.exports = ({ config }) => {
-  const baseUrl = process.env.KOUSKOUS_BASE_URL;
-
-  if (!baseUrl) return config;
+  const baseUrl = process.env.KOUSKOUS_BASE_URL ?? '';
 
   return {
     ...config,
-    experiments: { ...config.experiments, baseUrl },
+    // Also exposed through `extra` so runtime code can build shareable
+    // links: expo-router does not publish the base URL to the bundle, and
+    // a link built without it 404s on GitHub Pages.
+    extra: { ...config.extra, baseUrl },
+    ...(baseUrl ? { experiments: { ...config.experiments, baseUrl } } : {}),
   };
 };

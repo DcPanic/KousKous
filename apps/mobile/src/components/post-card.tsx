@@ -14,6 +14,7 @@ import { colors, gradients, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import type { MockPost } from '@/data/mock';
 import { findPersonByName } from '@/data/people';
+import { linkTo, shareLink } from '@/lib/share';
 import { useAppState } from '@/state/app-state';
 import { AttachmentGrid } from './attachments';
 import { Avatar, AvatarStack } from './avatar';
@@ -31,10 +32,19 @@ export function PostCard({ post, openable = true }: PostCardProps) {
   const { hasLiked, toggleLike, isPostSaved, toggleSavedPost } = useAppState();
 
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [shareNote, setShareNote] = useState<string | null>(null);
 
   const liked = hasLiked(post.id);
   const saved = isPostSaved(post.id);
   const openPost = () => router.push({ pathname: '/post/[id]', params: { id: post.id } });
+
+  const share = async () => {
+    const result = await shareLink(
+      `Δες αυτή τη δημοσίευση της ${post.author} στο KousKous`,
+      linkTo(`/post/${post.id}`),
+    );
+    if (result === 'copied') setShareNote('Ο σύνδεσμος αντιγράφηκε');
+  };
   // Only seeded authors have a profile; posts written in the app are the
   // signed-in user's own, so there is nothing to open.
   const person = findPersonByName(post.author);
@@ -111,7 +121,13 @@ export function PostCard({ post, openable = true }: PostCardProps) {
             onPress={openable ? openPost : undefined}
             label="Σχόλια"
           />
-          <ActionCount icon={Send} count={post.shares} tint={colors.textSecondary} label="Κοινοποίηση" />
+          <ActionCount
+            icon={Send}
+            count={post.shares}
+            tint={colors.textSecondary}
+            onPress={() => void share()}
+            label="Κοινοποίηση"
+          />
         </View>
         <Pressable
           onPress={() => toggleSavedPost(post.id)}
@@ -127,6 +143,8 @@ export function PostCard({ post, openable = true }: PostCardProps) {
           />
         </Pressable>
       </View>
+
+      {shareNote ? <Text style={styles.shareNote}>{shareNote}</Text> : null}
 
       {post.likedByLabel.length > 0 ? (
         <View style={styles.socialProof}>
@@ -271,6 +289,12 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontFamily: font.bold,
     color: colors.textBody,
+  },
+  shareNote: {
+    fontSize: 11,
+    fontFamily: font.bold,
+    color: colors.success,
+    marginTop: spacing.sm,
   },
   socialProof: {
     flexDirection: 'row',

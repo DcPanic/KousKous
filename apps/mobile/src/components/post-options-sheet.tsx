@@ -3,6 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ArrowLeft, Ban, Check, Flag, Link2, UserMinus } from 'lucide-react-native';
 import { colors, radii, spacing, toGreekUpperCase } from '@kouskous/shared';
 import { font } from '@/theme/typography';
+import { linkTo, shareLink } from '@/lib/share';
 import { useAppState } from '@/state/app-state';
 
 /** The reasons moderation actually needs to triage a report. */
@@ -60,7 +61,10 @@ export function PostOptionsSheet({ visible, onClose, postId, author }: PostOptio
             <Option
               icon={Link2}
               label={copied ? 'Ο σύνδεσμος αντιγράφηκε' : 'Αντιγραφή συνδέσμου'}
-              onPress={() => setCopied(true)}
+              onPress={() => {
+                void shareLink('Δες αυτό στο KousKous', linkTo(`/post/${postId}`));
+                setCopied(true);
+              }}
             />
             <Option
               icon={Flag}
