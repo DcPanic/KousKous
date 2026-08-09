@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { emptyDateRange, hasDateRange, type DateRange, type PriceBand } from '@kouskous/shared';
 import type { ForumReply, ForumThread } from '@/data/forum';
+import type { ChatMessage } from '@/data/chat';
 import type { MockPost } from '@/data/mock';
 import { loadStringList, saveStringList } from '@/lib/storage';
 
@@ -72,6 +73,10 @@ interface AppStateValue {
 
   repliesFor: (threadId: string) => ForumReply[];
   addReply: (threadId: string, reply: ForumReply) => void;
+
+  /** Messages sent in this session, per conversation. */
+  sentMessages: (conversationId: string) => ChatMessage[];
+  sendMessage: (conversationId: string, message: ChatMessage) => void;
 }
 
 const AppStateContext = createContext<AppStateValue | null>(null);
@@ -88,6 +93,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [createdThreads, setCreatedThreads] = useState<ForumThread[]>([]);
   const [createdPosts, setCreatedPosts] = useState<MockPost[]>([]);
   const [replies, setReplies] = useState<Record<string, ForumReply[]>>({});
+  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
 
   // Restore preferences once, then mirror every later change back to
   // storage. The guard stops the first write from clobbering what was
@@ -188,6 +194,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setReplies((prev) => ({ ...prev, [threadId]: [...(prev[threadId] ?? []), reply] }));
   }, []);
 
+  const sendMessage = useCallback((conversationId: string, message: ChatMessage) => {
+    setMessages((prev) => ({
+      ...prev,
+      [conversationId]: [...(prev[conversationId] ?? []), message],
+    }));
+  }, []);
+
   const value = useMemo<AppStateValue>(
     () => ({
       drawerOpen,
@@ -217,6 +230,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       addPost,
       repliesFor: (threadId: string) => replies[threadId] ?? [],
       addReply,
+      sentMessages: (conversationId: string) => messages[conversationId] ?? [],
+      sendMessage,
     }),
     [
       drawerOpen,
@@ -241,6 +256,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       addPost,
       replies,
       addReply,
+      messages,
+      sendMessage,
     ],
   );
 

@@ -3,6 +3,7 @@ import { Bell, Menu, MessageSquareText, Plus } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { colors, fontSizes, radii, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
+import { totalUnread } from '@/data/chat';
 import { useAppState } from '@/state/app-state';
 
 /** Unread notification count. Static until notifications are wired up. */
@@ -34,8 +35,18 @@ export function AppHeader() {
       </View>
 
       <View style={[styles.side, styles.sideRight]}>
-        <Pressable hitSlop={10} accessibilityRole="button" accessibilityLabel="Μηνύματα">
+        <Pressable
+          onPress={() => router.push('/chat')}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Μηνύματα"
+        >
           <MessageSquareText size={21} color={colors.text} strokeWidth={1.8} />
+          {totalUnread > 0 ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{totalUnread}</Text>
+            </View>
+          ) : null}
         </Pressable>
         <Pressable
           onPress={() => router.push('/create')}
