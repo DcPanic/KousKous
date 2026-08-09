@@ -86,7 +86,11 @@ export default function SettingsScreen() {
 
         <Section label="Συνδρομή" />
         {tier === 'free' ? (
-          <Pressable style={styles.upgradeCard} accessibilityRole="button">
+          <Pressable
+            onPress={() => router.push('/membership')}
+            style={styles.upgradeCard}
+            accessibilityRole="button"
+          >
             <Sparkles size={19} color={colors.white} />
             <View style={styles.upgradeText}>
               <Text style={styles.upgradeTitle}>Γίνε μέλος</Text>

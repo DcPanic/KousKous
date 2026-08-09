@@ -171,7 +171,14 @@ export function DrawerMenu() {
             }}
           />
           <DrawerRow icon={UserPlus} label="Φίλες" />
-          <DrawerRow icon={Sparkles} label="Γίνε Premium Host" />
+          <DrawerRow
+            icon={Sparkles}
+            label="Γίνε Premium Host"
+            onPress={() => {
+              closeDrawer();
+              router.push('/host-plan');
+            }}
+          />
           <DrawerRow
             icon={Settings}
             label="Ρυθμίσεις"

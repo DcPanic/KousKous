@@ -1,4 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Lock } from 'lucide-react-native';
 import { colors, paidMemberCta, radii, spacing } from '@kouskous/shared';
@@ -7,6 +8,7 @@ import { font } from '@/theme/typography';
 interface LockedOverlayProps {
   title: string;
   subtitle: string;
+  /** Defaults to opening the membership screen. */
   onUpgrade?: () => void;
 }
 
@@ -16,6 +18,9 @@ interface LockedOverlayProps {
  * value of upgrading is visible — it fades out rather than being hidden.
  */
 export function LockedOverlay({ title, subtitle, onUpgrade }: LockedOverlayProps) {
+  const router = useRouter();
+  const upgrade = onUpgrade ?? (() => router.push('/membership'));
+
   return (
     <LinearGradient
       colors={['rgba(255,246,248,0)', colors.cream]}
@@ -29,7 +34,7 @@ export function LockedOverlay({ title, subtitle, onUpgrade }: LockedOverlayProps
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.subtitle}>{subtitle}</Text>
-      <Pressable style={styles.cta} onPress={onUpgrade} accessibilityRole="button">
+      <Pressable style={styles.cta} onPress={upgrade} accessibilityRole="button">
         <Text style={styles.ctaLabel}>{paidMemberCta}</Text>
       </Pressable>
     </LinearGradient>

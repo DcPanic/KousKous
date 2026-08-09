@@ -71,19 +71,25 @@ npm run typecheck
 - Design system από τα εγκεκριμένα mockups (χρώματα, Pacifico + Manrope, lucide icons)
 - Bottom navigation με 5 στοιχεία και ανυψωμένο κεντρικό κουμπί
 - Drawer menu με ομαδοποιημένες κατηγορίες και follow toggles
-- Φίλτρο τοποθεσίας που εφαρμόζεται σε Feed, Forums και Events
-- Feed: stories, tabs, post cards, promo banners
-- Forums & Events με paywall overlay για free μέλη
-- Προφίλ με CTA ανά τύπο λογαριασμού
+- Φίλτρα σε pop-up sheet: αναζήτηση τοποθεσίας με προτάσεις, εύρος ημερομηνιών,
+  κατηγορία event, τιμή, διαθεσιμότητα
+- Feed: stories, tabs, post cards, promo banners, δημιουργία δημοσίευσης με media
+- Forums ανά κοινότητα, οθόνη συζήτησης με απαντήσεις, φωτογραφίες/βίντεο και αγαπημένα
+- Events: λίστα, σελίδα event, δήλωση συμμετοχής
+- Chat/DM: λίστα συνομιλιών και συνομιλία με media
+- Ειδοποιήσεις, Rewards Club, Ρυθμίσεις
+- Συνδρομή, ολοκλήρωση παραγγελίας και σελίδα Premium Host
+- Δημιουργία event για διοργανώτριες
+- Δημόσιο προφίλ άλλης χρήστριας
 - Host Dashboard: Επισκόπηση, Events, Πληρωμές, Reviews — με δικό του bottom nav
 - Official Dashboard: Επισκόπηση, Events, Rewards, Ανακοινώσεις
 - Admin panel: επισκόπηση + ουρά εγκρίσεων host
 
-Εκκρεμούν (βλ. roadmap §11 του master prompt):
+Εκκρεμούν:
 
 - Supabase auth, schema και πραγματικά δεδομένα — τώρα όλα είναι mock
-- Event detail, Δημιουργία post, Chat/DM, Rewards Club, Ρυθμίσεις
-- Συνδρομές και Viva Wallet Marketplace integration
+- Stripe: συνδρομές μελών και Connect payouts για τις διοργανώτριες
+- Αποθήκευση media (τώρα οι φωτογραφίες ζουν μόνο στη συσκευή για τη συνεδρία)
 
 ## Preview τύπων λογαριασμού
 

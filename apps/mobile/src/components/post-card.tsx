@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   BadgeCheck,
@@ -11,24 +12,40 @@ import {
 import { colors, gradients, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import type { MockPost } from '@/data/mock';
+import { findPersonByName } from '@/data/people';
 import { AttachmentGrid } from './attachments';
 import { Avatar, AvatarStack } from './avatar';
 import { DiagonalGradient } from './gradient';
 
 export function PostCard({ post }: { post: MockPost }) {
+  const router = useRouter();
+  // Only seeded authors have a profile; posts written in the app are the
+  // signed-in user's own, so there is nothing to open.
+  const person = findPersonByName(post.author);
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Avatar size={42} />
-        <View style={styles.headerText}>
-          <View style={styles.nameRow}>
-            <Text style={styles.name}>{post.author}</Text>
-            {post.verified ? <BadgeCheck size={14} color={colors.pink} fill={colors.pinkTint} /> : null}
+        <Pressable
+          onPress={() =>
+            person ? router.push({ pathname: '/u/[id]', params: { id: person.id } }) : undefined
+          }
+          disabled={!person}
+          style={styles.authorTap}
+          accessibilityRole={person ? 'button' : undefined}
+          accessibilityLabel={person ? `Προφίλ: ${post.author}` : undefined}
+        >
+          <Avatar size={42} />
+          <View style={styles.headerText}>
+            <View style={styles.nameRow}>
+              <Text style={styles.name}>{post.author}</Text>
+              {post.verified ? <BadgeCheck size={14} color={colors.pink} fill={colors.pinkTint} /> : null}
+            </View>
+            <Text style={styles.meta}>
+              {post.locationLabel} · {post.timeAgo}
+            </Text>
           </View>
-          <Text style={styles.meta}>
-            {post.locationLabel} · {post.timeAgo}
-          </Text>
-        </View>
+        </Pressable>
         <Pressable hitSlop={8} accessibilityRole="button" accessibilityLabel="Περισσότερα">
           <MoreHorizontal size={18} color={colors.textMuted} />
         </Pressable>
@@ -112,6 +129,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     marginBottom: spacing.md + 2,
+  },
+  authorTap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
   headerText: {
     flex: 1,

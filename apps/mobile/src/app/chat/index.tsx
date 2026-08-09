@@ -80,7 +80,11 @@ export default function ChatListScreen() {
           <Text style={styles.lockedBody}>
             Στείλε μήνυμα σε γυναίκες που γνώρισες σε events και κοινότητες.
           </Text>
-          <Pressable style={styles.cta} accessibilityRole="button">
+          <Pressable
+            onPress={() => router.push('/membership')}
+            style={styles.cta}
+            accessibilityRole="button"
+          >
             <Text style={styles.ctaLabel}>{paidMemberCta}</Text>
           </Pressable>
         </View>

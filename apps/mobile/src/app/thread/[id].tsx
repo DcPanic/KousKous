@@ -24,6 +24,7 @@ import {
 import { can, colors, findCategory, findLocation, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { findThread, type Attachment } from '@/data/forum';
+import { findPersonByName } from '@/data/people';
 import { pickMedia } from '@/lib/media';
 import { useAppState } from '@/state/app-state';
 import { useSession } from '@/state/session';
@@ -54,6 +55,7 @@ export default function ThreadScreen() {
   }
 
   const category = findCategory(thread.categoryId);
+  const author = findPersonByName(thread.author);
   const saved = isSaved(thread.id);
   const canReply = can(user, 'forums_participate');
   const replies = [...thread.replies, ...repliesFor(thread.id)];
@@ -119,7 +121,15 @@ export default function ThreadScreen() {
       >
         <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
           <View style={styles.opening}>
-            <View style={styles.authorRow}>
+            <Pressable
+              onPress={() =>
+                author ? router.push({ pathname: '/u/[id]', params: { id: author.id } }) : undefined
+              }
+              disabled={!author}
+              style={styles.authorRow}
+              accessibilityRole={author ? 'button' : undefined}
+              accessibilityLabel={author ? `Προφίλ: ${thread.author}` : undefined}
+            >
               <Avatar size={38} />
               <View style={styles.authorText}>
                 <View style={styles.authorNameRow}>
@@ -132,7 +142,7 @@ export default function ThreadScreen() {
                   {findLocation(thread.location)?.name} · {thread.timeAgo}
                 </Text>
               </View>
-            </View>
+            </Pressable>
 
             <Text style={styles.title}>{thread.title}</Text>
             <Text style={styles.bodyText}>{thread.body}</Text>

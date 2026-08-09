@@ -68,7 +68,11 @@ export default function ProfileScreen() {
         ) : null}
 
         {tier === 'free' ? (
-          <Pressable style={styles.upgrade} accessibilityRole="button">
+          <Pressable
+            style={styles.upgrade}
+            onPress={() => router.push('/membership')}
+            accessibilityRole="button"
+          >
             <Text style={styles.upgradeLabel}>
               Αναβάθμιση σε Μέλος · €{PAID_MEMBER_PRICE_EUR.toFixed(2).replace('.', ',')}
             </Text>

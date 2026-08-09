@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   AlertCircle,
@@ -88,11 +89,16 @@ export function HostOverviewTab({ paymentVerified }: TabProps) {
 }
 
 export function HostEventsTab() {
+  const router = useRouter();
   const [scope, setScope] = useState<'upcoming' | 'past'>('upcoming');
 
   return (
     <ScrollView contentContainerStyle={shared.content} showsVerticalScrollIndicator={false}>
-      <Pressable style={[shared.primaryButton, { backgroundColor: ACCENT }]} accessibilityRole="button">
+      <Pressable
+        onPress={() => router.push('/create-event')}
+        style={[shared.primaryButton, { backgroundColor: ACCENT }]}
+        accessibilityRole="button"
+      >
         <Plus size={16} color={colors.white} strokeWidth={2.6} />
         <Text style={shared.primaryButtonLabel}>Νέο Event</Text>
       </Pressable>

@@ -22,6 +22,7 @@ import {
 import { can, colors, findPlace, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { findConversation } from '@/data/chat';
+import { findPersonByName } from '@/data/people';
 import type { Attachment } from '@/data/forum';
 import { pickMedia } from '@/lib/media';
 import { useAppState } from '@/state/app-state';
@@ -47,6 +48,7 @@ export default function ConversationScreen() {
 
   const conversationId = typeof id === 'string' ? id : '';
   const conversation = findConversation(conversationId);
+  const person = conversation ? findPersonByName(conversation.name) : undefined;
 
   if (!conversation) {
     return (
@@ -93,21 +95,31 @@ export default function ConversationScreen() {
           <ArrowLeft size={17} color={colors.text} />
         </Pressable>
 
-        <Avatar size={36} />
+        <Pressable
+          onPress={() =>
+            person ? router.push({ pathname: '/u/[id]', params: { id: person.id } }) : undefined
+          }
+          disabled={!person}
+          style={styles.headerTap}
+          accessibilityRole={person ? 'button' : undefined}
+          accessibilityLabel={person ? `Προφίλ: ${conversation.name}` : undefined}
+        >
+          <Avatar size={36} />
 
-        <View style={styles.headerText}>
-          <View style={styles.headerNameRow}>
-            <Text style={styles.headerTitle} numberOfLines={1}>
-              {conversation.name}
+          <View style={styles.headerText}>
+            <View style={styles.headerNameRow}>
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {conversation.name}
+              </Text>
+              {conversation.verified ? (
+                <BadgeCheck size={13} color={colors.pink} fill={colors.pinkTint} />
+              ) : null}
+            </View>
+            <Text style={styles.headerMeta}>
+              {conversation.online ? 'Σε σύνδεση' : findPlace(conversation.location)?.name}
             </Text>
-            {conversation.verified ? (
-              <BadgeCheck size={13} color={colors.pink} fill={colors.pinkTint} />
-            ) : null}
           </View>
-          <Text style={styles.headerMeta}>
-            {conversation.online ? 'Σε σύνδεση' : findPlace(conversation.location)?.name}
-          </Text>
-        </View>
+        </Pressable>
       </View>
 
       <KeyboardAvoidingView
@@ -219,6 +231,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     boxShadow: shadows.card,
+  },
+  headerTap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
   headerText: {
     flex: 1,

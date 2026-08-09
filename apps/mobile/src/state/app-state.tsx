@@ -58,6 +58,11 @@ interface AppStateValue {
   isFollowing: (categoryId: string) => boolean;
   toggleFollow: (categoryId: string) => void;
 
+  /** Events the user said yes to. */
+  joinedEventIds: string[];
+  hasJoined: (eventId: string) => boolean;
+  toggleJoined: (eventId: string) => void;
+
   /** Threads the user keeps, so she can return to the conversation. */
   savedThreadIds: string[];
   isSaved: (threadId: string) => boolean;
@@ -90,6 +95,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [availableOnly, setAvailableOnly] = useState(false);
   const [followedCategories, setFollowedCategories] = useState<string[]>(DEFAULT_FOLLOWS);
   const [savedThreadIds, setSavedThreadIds] = useState<string[]>([]);
+  const [joinedEventIds, setJoinedEventIds] = useState<string[]>([]);
   const [createdThreads, setCreatedThreads] = useState<ForumThread[]>([]);
   const [createdPosts, setCreatedPosts] = useState<MockPost[]>([]);
   const [replies, setReplies] = useState<Record<string, ForumReply[]>>({});
@@ -176,6 +182,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const toggleJoined = useCallback((eventId: string) => {
+    setJoinedEventIds((prev) =>
+      prev.includes(eventId) ? prev.filter((item) => item !== eventId) : [eventId, ...prev],
+    );
+  }, []);
+
   const toggleSaved = useCallback((threadId: string) => {
     setSavedThreadIds((prev) =>
       prev.includes(threadId) ? prev.filter((item) => item !== threadId) : [threadId, ...prev],
@@ -221,6 +233,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       followedCategories,
       isFollowing: (categoryId: string) => followedCategories.includes(categoryId),
       toggleFollow,
+      joinedEventIds,
+      hasJoined: (eventId: string) => joinedEventIds.includes(eventId),
+      toggleJoined,
       savedThreadIds,
       isSaved: (threadId: string) => savedThreadIds.includes(threadId),
       toggleSaved,
@@ -248,6 +263,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       clearFilters,
       followedCategories,
       toggleFollow,
+      joinedEventIds,
+      toggleJoined,
       savedThreadIds,
       toggleSaved,
       createdThreads,

@@ -163,7 +163,11 @@ export default function RewardsScreen() {
             Μάζεψε πόντους από κάθε συμμετοχή και κέρδισε δώρα και προσφορές από τις συνεργάτιδες
             επιχειρήσεις μας.
           </Text>
-          <Pressable style={styles.cta} accessibilityRole="button">
+          <Pressable
+            onPress={() => router.push('/membership')}
+            style={styles.cta}
+            accessibilityRole="button"
+          >
             <Text style={styles.ctaLabel}>{paidMemberCta}</Text>
           </Pressable>
         </View>

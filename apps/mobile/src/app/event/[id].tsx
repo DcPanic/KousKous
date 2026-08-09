@@ -29,6 +29,7 @@ import {
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { findEventDetail, type EventDetail } from '@/data/event-detail';
+import { useAppState } from '@/state/app-state';
 import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
 import { DiagonalGradient } from '@/components/gradient';
@@ -37,6 +38,7 @@ import { PlaceholderScreen } from '@/components/placeholder-screen';
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useSession();
+  const { hasJoined, toggleJoined } = useAppState();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -180,7 +182,15 @@ export default function EventDetailScreen() {
         </View>
       </ScrollView>
 
-      <JoinBar canJoin={canJoin} isFree={isFree} price={event.price} soldOut={spotsLeft <= 0} />
+      <JoinBar
+        canJoin={canJoin}
+        isFree={isFree}
+        price={event.price}
+        soldOut={spotsLeft <= 0}
+        joined={hasJoined(event.id)}
+        onUpgrade={() => router.push('/membership')}
+        onJoin={() => toggleJoined(event.id)}
+      />
     </View>
   );
 }
@@ -228,6 +238,9 @@ function FaqRow({ question, answer }: { question: string; answer: string }) {
 
 interface JoinBarProps {
   canJoin: boolean;
+  joined: boolean;
+  onUpgrade: () => void;
+  onJoin: () => void;
   isFree: boolean;
   price: number;
   soldOut: boolean;
@@ -237,17 +250,19 @@ interface JoinBarProps {
  * Sticky action bar. Free members see the upgrade CTA instead of the join
  * button — joining an event is a paid-member feature (spec §3).
  */
-function JoinBar({ canJoin, isFree, price, soldOut }: JoinBarProps) {
+function JoinBar({ canJoin, isFree, price, soldOut, joined, onUpgrade, onJoin }: JoinBarProps) {
   const insets = useSafeAreaInsets();
   const formattedPrice = `€${price.toFixed(2).replace('.', ',')}`;
 
   let label: string;
   if (!canJoin) label = paidMemberCta;
+  else if (joined) label = 'Δήλωσες συμμετοχή ✓';
   else if (soldOut) label = 'Συμπληρώθηκε';
   else if (isFree) label = 'Δήλωσε συμμετοχή · Δωρεάν';
   else label = `Κλείσε θέση · ${formattedPrice}`;
 
-  const disabled = canJoin && soldOut;
+  // A sold-out event is only closed to women who are not already in.
+  const disabled = canJoin && soldOut && !joined;
 
   return (
     <View style={[styles.joinBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
@@ -258,7 +273,12 @@ function JoinBar({ canJoin, isFree, price, soldOut }: JoinBarProps) {
         </View>
       ) : null}
       <Pressable
-        style={[styles.joinButton, disabled && styles.joinButtonDisabled]}
+        onPress={canJoin ? onJoin : onUpgrade}
+        style={[
+          styles.joinButton,
+          disabled && styles.joinButtonDisabled,
+          joined && styles.joinButtonJoined,
+        ]}
         disabled={disabled}
         accessibilityRole="button"
       >
@@ -527,6 +547,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.pink,
     borderRadius: radii.pill,
     paddingVertical: spacing.lg,
+  },
+  joinButtonJoined: {
+    backgroundColor: colors.success,
   },
   joinButtonDisabled: {
     backgroundColor: colors.textInactive,
