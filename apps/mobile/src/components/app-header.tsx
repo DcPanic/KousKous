@@ -4,10 +4,8 @@ import { useRouter } from 'expo-router';
 import { colors, fontSizes, radii, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { totalUnread } from '@/data/chat';
+import { unreadNotifications } from '@/data/notifications';
 import { useAppState } from '@/state/app-state';
-
-/** Unread notification count. Static until notifications are wired up. */
-const UNREAD_COUNT = 3;
 
 export function AppHeader() {
   const { openDrawer } = useAppState();
@@ -19,11 +17,16 @@ export function AppHeader() {
         <Pressable onPress={openDrawer} hitSlop={10} accessibilityRole="button" accessibilityLabel="Μενού">
           <Menu size={20} color={colors.text} strokeWidth={2} />
         </Pressable>
-        <Pressable hitSlop={10} accessibilityRole="button" accessibilityLabel="Ειδοποιήσεις">
+        <Pressable
+          onPress={() => router.push('/notifications')}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Ειδοποιήσεις"
+        >
           <Bell size={21} color={colors.text} strokeWidth={1.8} />
-          {UNREAD_COUNT > 0 ? (
+          {unreadNotifications > 0 ? (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{UNREAD_COUNT}</Text>
+              <Text style={styles.badgeText}>{unreadNotifications}</Text>
             </View>
           ) : null}
         </Pressable>

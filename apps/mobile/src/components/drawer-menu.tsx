@@ -162,10 +162,24 @@ export function DrawerMenu() {
               router.push('/saved');
             }}
           />
-          <DrawerRow icon={Gift} label="Δώρα & Προσφορές" />
+          <DrawerRow
+            icon={Gift}
+            label="Δώρα & Προσφορές"
+            onPress={() => {
+              closeDrawer();
+              router.push('/rewards');
+            }}
+          />
           <DrawerRow icon={UserPlus} label="Φίλες" />
           <DrawerRow icon={Sparkles} label="Γίνε Premium Host" />
-          <DrawerRow icon={Settings} label="Ρυθμίσεις" />
+          <DrawerRow
+            icon={Settings}
+            label="Ρυθμίσεις"
+            onPress={() => {
+              closeDrawer();
+              router.push('/settings');
+            }}
+          />
           <DrawerRow icon={HelpCircle} label="Βοήθεια" />
           <DrawerRow icon={LogOut} label="Αποσύνδεση" />
         </ScrollView>
