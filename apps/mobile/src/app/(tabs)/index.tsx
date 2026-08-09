@@ -12,12 +12,25 @@ import { StoryRow } from '@/components/story-row';
 
 export default function FeedScreen() {
   const [tab, setTab] = useState<FeedTab>('foryou');
-  const { selectedPlaces } = useAppState();
+  const { selectedPlaces, createdPosts, followedCategories } = useAppState();
 
-  const visiblePosts = useMemo(
-    () => posts.filter((post) => matchesPlaces(post.location, selectedPlaces)),
-    [selectedPlaces],
-  );
+  const visiblePosts = useMemo(() => {
+    const inPlace = [...createdPosts, ...posts].filter((post) =>
+      matchesPlaces(post.location, selectedPlaces),
+    );
+
+    // "Ακολουθείτε" narrows to the communities she follows; "Trending"
+    // reorders by reactions rather than filtering, so nothing disappears.
+    if (tab === 'following') {
+      return inPlace.filter(
+        (post) => post.categoryId !== null && followedCategories.includes(post.categoryId),
+      );
+    }
+    if (tab === 'trending') {
+      return [...inPlace].sort((a, b) => b.likes - a.likes);
+    }
+    return inPlace;
+  }, [createdPosts, followedCategories, selectedPlaces, tab]);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -29,9 +42,13 @@ export default function FeedScreen() {
         visiblePosts.map((post) => <PostCard key={post.id} post={post} />)
       ) : (
         <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>Δεν βρέθηκαν δημοσιεύσεις</Text>
+          <Text style={styles.emptyTitle}>
+            {tab === 'following' ? 'Καμία δημοσίευση από τις κοινότητές σου' : 'Δεν βρέθηκαν δημοσιεύσεις'}
+          </Text>
           <Text style={styles.emptyBody}>
-            Δοκίμασε να αλλάξεις ή να καθαρίσεις το φίλτρο τοποθεσίας.
+            {tab === 'following'
+              ? 'Ακολούθησε κοινότητες από το μενού για να γεμίσει αυτή η καρτέλα.'
+              : 'Δοκίμασε να αλλάξεις ή να καθαρίσεις το φίλτρο τοποθεσίας.'}
           </Text>
         </View>
       )}

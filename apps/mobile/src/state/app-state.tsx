@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { emptyDateRange, hasDateRange, type DateRange, type PriceBand } from '@kouskous/shared';
 import type { ForumReply, ForumThread } from '@/data/forum';
+import type { MockPost } from '@/data/mock';
 import { loadStringList, saveStringList } from '@/lib/storage';
 
 /** Which screen's filters are being counted or cleared. */
@@ -65,6 +66,10 @@ interface AppStateValue {
   createdThreads: ForumThread[];
   addThread: (thread: ForumThread) => void;
 
+  /** Posts written in this session, newest first. */
+  createdPosts: MockPost[];
+  addPost: (post: MockPost) => void;
+
   repliesFor: (threadId: string) => ForumReply[];
   addReply: (threadId: string, reply: ForumReply) => void;
 }
@@ -81,6 +86,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [followedCategories, setFollowedCategories] = useState<string[]>(DEFAULT_FOLLOWS);
   const [savedThreadIds, setSavedThreadIds] = useState<string[]>([]);
   const [createdThreads, setCreatedThreads] = useState<ForumThread[]>([]);
+  const [createdPosts, setCreatedPosts] = useState<MockPost[]>([]);
   const [replies, setReplies] = useState<Record<string, ForumReply[]>>({});
 
   // Restore preferences once, then mirror every later change back to
@@ -174,6 +180,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setCreatedThreads((prev) => [thread, ...prev]);
   }, []);
 
+  const addPost = useCallback((post: MockPost) => {
+    setCreatedPosts((prev) => [post, ...prev]);
+  }, []);
+
   const addReply = useCallback((threadId: string, reply: ForumReply) => {
     setReplies((prev) => ({ ...prev, [threadId]: [...(prev[threadId] ?? []), reply] }));
   }, []);
@@ -203,6 +213,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toggleSaved,
       createdThreads,
       addThread,
+      createdPosts,
+      addPost,
       repliesFor: (threadId: string) => replies[threadId] ?? [],
       addReply,
     }),
@@ -225,6 +237,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toggleSaved,
       createdThreads,
       addThread,
+      createdPosts,
+      addPost,
       replies,
       addReply,
     ],

@@ -1,3 +1,4 @@
+import type { Attachment } from '@/data/forum';
 import { daysUntilSaturday, isoDaysFromNow } from '@/lib/date';
 
 /**
@@ -34,6 +35,10 @@ export interface MockPost {
   likedByLabel: string;
   commentPreviews: MockComment[];
   totalComments: number;
+  /** Drives the "Ακολουθείτε" tab. */
+  categoryId: string | null;
+  /** Present on posts written in the app; seeded posts use mediaCount. */
+  attachments?: Attachment[];
 }
 
 export interface MockForum {
@@ -70,6 +75,7 @@ export const posts: MockPost[] = [
       { author: 'Μαρία', text: 'Τέλειες! Θέλω κι εγώ την επόμενη φορά 😍' },
     ],
     totalComments: 30,
+    categoryId: 'relationships',
   },
   {
     id: 'p2',
@@ -87,6 +93,7 @@ export const posts: MockPost[] = [
     likedByLabel: 'Αρέσει στην Κατερίνα και 73 ακόμα',
     commentPreviews: [{ author: 'Κατερίνα', text: 'Πού είναι αυτό; 🙌' }],
     totalComments: 11,
+    categoryId: 'recipes',
   },
   {
     id: 'p3',
@@ -104,6 +111,7 @@ export const posts: MockPost[] = [
     likedByLabel: 'Αρέσει στην Άννα Μαρία και 202 ακόμα',
     commentPreviews: [{ author: 'Σοφία', text: 'Ονειρικό! 😍' }],
     totalComments: 24,
+    categoryId: 'travel',
   },
 ];
 

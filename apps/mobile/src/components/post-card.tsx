@@ -11,6 +11,7 @@ import {
 import { colors, gradients, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import type { MockPost } from '@/data/mock';
+import { AttachmentGrid } from './attachments';
 import { Avatar, AvatarStack } from './avatar';
 import { DiagonalGradient } from './gradient';
 
@@ -33,16 +34,20 @@ export function PostCard({ post }: { post: MockPost }) {
         </Pressable>
       </View>
 
-      <Text style={styles.caption}>{post.caption}</Text>
-      <Text style={styles.hashtags}>{post.hashtags}</Text>
+      {post.caption.length > 0 ? <Text style={styles.caption}>{post.caption}</Text> : null}
+      {post.hashtags.length > 0 ? <Text style={styles.hashtags}>{post.hashtags}</Text> : null}
 
-      <DiagonalGradient colors={gradients.photo} style={styles.media}>
-        {post.mediaCount > 1 ? (
-          <View style={styles.mediaBadge}>
-            <Text style={styles.mediaBadgeLabel}>1/{post.mediaCount}</Text>
-          </View>
-        ) : null}
-      </DiagonalGradient>
+      {post.attachments && post.attachments.length > 0 ? (
+        <AttachmentGrid attachments={post.attachments} height={220} />
+      ) : post.mediaCount > 0 ? (
+        <DiagonalGradient colors={gradients.photo} style={styles.media}>
+          {post.mediaCount > 1 ? (
+            <View style={styles.mediaBadge}>
+              <Text style={styles.mediaBadgeLabel}>1/{post.mediaCount}</Text>
+            </View>
+          ) : null}
+        </DiagonalGradient>
+      ) : null}
 
       <View style={styles.actions}>
         <View style={styles.actionGroup}>
@@ -55,10 +60,12 @@ export function PostCard({ post }: { post: MockPost }) {
         </Pressable>
       </View>
 
-      <View style={styles.socialProof}>
-        <AvatarStack tints={['#E9A9BC', '#C9A227']} />
-        <Text style={styles.socialProofLabel}>{post.likedByLabel}</Text>
-      </View>
+      {post.likedByLabel.length > 0 ? (
+        <View style={styles.socialProof}>
+          <AvatarStack tints={['#E9A9BC', '#C9A227']} />
+          <Text style={styles.socialProofLabel}>{post.likedByLabel}</Text>
+        </View>
+      ) : null}
 
       {post.commentPreviews.map((comment) => (
         <Text key={comment.author} style={styles.comment}>
@@ -66,9 +73,11 @@ export function PostCard({ post }: { post: MockPost }) {
         </Text>
       ))}
 
-      <Pressable accessibilityRole="button">
-        <Text style={styles.moreComments}>Δείτε και τα {post.totalComments} σχόλια</Text>
-      </Pressable>
+      {post.totalComments > 0 ? (
+        <Pressable accessibilityRole="button">
+          <Text style={styles.moreComments}>Δείτε και τα {post.totalComments} σχόλια</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }

@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Bell, Menu, MessageSquareText, Plus } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { colors, fontSizes, radii, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { useAppState } from '@/state/app-state';
@@ -9,6 +10,7 @@ const UNREAD_COUNT = 3;
 
 export function AppHeader() {
   const { openDrawer } = useAppState();
+  const router = useRouter();
 
   return (
     <View style={styles.container}>
@@ -35,7 +37,12 @@ export function AppHeader() {
         <Pressable hitSlop={10} accessibilityRole="button" accessibilityLabel="Μηνύματα">
           <MessageSquareText size={21} color={colors.text} strokeWidth={1.8} />
         </Pressable>
-        <Pressable style={styles.createButton} accessibilityRole="button" accessibilityLabel="Δημιουργία">
+        <Pressable
+          onPress={() => router.push('/create')}
+          style={styles.createButton}
+          accessibilityRole="button"
+          accessibilityLabel="Δημιουργία"
+        >
           <Plus size={17} color={colors.white} strokeWidth={2.6} />
         </Pressable>
       </View>
