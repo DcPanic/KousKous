@@ -80,7 +80,11 @@ export default function SettingsScreen() {
         </View>
 
         <Section label="Λογαριασμός" />
-        <Row icon={UserRound} label="Επεξεργασία προφίλ" />
+        <Row
+          icon={UserRound}
+          label="Επεξεργασία προφίλ"
+          onPress={() => router.push('/edit-profile')}
+        />
         <Row icon={Mail} label="Email" value={user.email ?? '—'} />
         <Row icon={MapPin} label="Περιοχή" value={findPlace(user.location ?? '')?.name ?? '—'} />
 
@@ -131,7 +135,11 @@ export default function SettingsScreen() {
         <Row icon={FileText} label="Όροι χρήσης & απόρρητο" />
 
         <Section label="" />
-        <Pressable style={styles.dangerRow} accessibilityRole="button">
+        <Pressable
+          onPress={() => router.replace('/welcome')}
+          style={styles.dangerRow}
+          accessibilityRole="button"
+        >
           <LogOut size={17} color={colors.text} />
           <Text style={styles.dangerLabel}>Αποσύνδεση</Text>
         </Pressable>
@@ -151,9 +159,19 @@ function Section({ label }: { label: string }) {
   return <Text style={styles.section}>{toGreekUpperCase(label)}</Text>;
 }
 
-function Row({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value?: string }) {
+function Row({
+  icon: Icon,
+  label,
+  value,
+  onPress,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value?: string;
+  onPress?: () => void;
+}) {
   return (
-    <Pressable style={styles.row} accessibilityRole="button">
+    <Pressable style={styles.row} onPress={onPress} accessibilityRole="button">
       <Icon size={17} color={colors.text} strokeWidth={1.8} />
       <Text style={styles.rowLabel}>{label}</Text>
       {value ? (

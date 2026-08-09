@@ -11,7 +11,7 @@ import {
 import { emptyDateRange, hasDateRange, type DateRange, type PriceBand } from '@kouskous/shared';
 import type { ForumReply, ForumThread } from '@/data/forum';
 import type { ChatMessage } from '@/data/chat';
-import type { MockPost } from '@/data/mock';
+import type { MockComment, MockPost } from '@/data/mock';
 import { loadStringList, saveStringList } from '@/lib/storage';
 
 /** Which screen's filters are being counted or cleared. */
@@ -63,6 +63,14 @@ interface AppStateValue {
   hasJoined: (eventId: string) => boolean;
   toggleJoined: (eventId: string) => void;
 
+  /** Posts she liked, and posts she bookmarked. */
+  likedPostIds: string[];
+  hasLiked: (postId: string) => boolean;
+  toggleLike: (postId: string) => void;
+  savedPostIds: string[];
+  isPostSaved: (postId: string) => boolean;
+  toggleSavedPost: (postId: string) => void;
+
   /** Threads the user keeps, so she can return to the conversation. */
   savedThreadIds: string[];
   isSaved: (threadId: string) => boolean;
@@ -75,6 +83,9 @@ interface AppStateValue {
   /** Posts written in this session, newest first. */
   createdPosts: MockPost[];
   addPost: (post: MockPost) => void;
+
+  commentsFor: (postId: string) => MockComment[];
+  addComment: (postId: string, comment: MockComment) => void;
 
   repliesFor: (threadId: string) => ForumReply[];
   addReply: (threadId: string, reply: ForumReply) => void;
@@ -96,9 +107,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [followedCategories, setFollowedCategories] = useState<string[]>(DEFAULT_FOLLOWS);
   const [savedThreadIds, setSavedThreadIds] = useState<string[]>([]);
   const [joinedEventIds, setJoinedEventIds] = useState<string[]>([]);
+  const [likedPostIds, setLikedPostIds] = useState<string[]>([]);
+  const [savedPostIds, setSavedPostIds] = useState<string[]>([]);
   const [createdThreads, setCreatedThreads] = useState<ForumThread[]>([]);
   const [createdPosts, setCreatedPosts] = useState<MockPost[]>([]);
   const [replies, setReplies] = useState<Record<string, ForumReply[]>>({});
+  const [comments, setComments] = useState<Record<string, MockComment[]>>({});
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
 
   // Restore preferences once, then mirror every later change back to
@@ -188,6 +202,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const toggleLike = useCallback((postId: string) => {
+    setLikedPostIds((prev) =>
+      prev.includes(postId) ? prev.filter((item) => item !== postId) : [postId, ...prev],
+    );
+  }, []);
+
+  const toggleSavedPost = useCallback((postId: string) => {
+    setSavedPostIds((prev) =>
+      prev.includes(postId) ? prev.filter((item) => item !== postId) : [postId, ...prev],
+    );
+  }, []);
+
   const toggleSaved = useCallback((threadId: string) => {
     setSavedThreadIds((prev) =>
       prev.includes(threadId) ? prev.filter((item) => item !== threadId) : [threadId, ...prev],
@@ -200,6 +226,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const addPost = useCallback((post: MockPost) => {
     setCreatedPosts((prev) => [post, ...prev]);
+  }, []);
+
+  const addComment = useCallback((postId: string, comment: MockComment) => {
+    setComments((prev) => ({ ...prev, [postId]: [...(prev[postId] ?? []), comment] }));
   }, []);
 
   const addReply = useCallback((threadId: string, reply: ForumReply) => {
@@ -236,6 +266,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       joinedEventIds,
       hasJoined: (eventId: string) => joinedEventIds.includes(eventId),
       toggleJoined,
+      likedPostIds,
+      hasLiked: (postId: string) => likedPostIds.includes(postId),
+      toggleLike,
+      savedPostIds,
+      isPostSaved: (postId: string) => savedPostIds.includes(postId),
+      toggleSavedPost,
       savedThreadIds,
       isSaved: (threadId: string) => savedThreadIds.includes(threadId),
       toggleSaved,
@@ -243,6 +279,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       addThread,
       createdPosts,
       addPost,
+      commentsFor: (postId: string) => comments[postId] ?? [],
+      addComment,
       repliesFor: (threadId: string) => replies[threadId] ?? [],
       addReply,
       sentMessages: (conversationId: string) => messages[conversationId] ?? [],
@@ -265,12 +303,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toggleFollow,
       joinedEventIds,
       toggleJoined,
+      likedPostIds,
+      toggleLike,
+      savedPostIds,
+      toggleSavedPost,
       savedThreadIds,
       toggleSaved,
       createdThreads,
       addThread,
       createdPosts,
       addPost,
+      comments,
+      addComment,
       replies,
       addReply,
       messages,

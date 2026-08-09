@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, gradients } from '@kouskous/shared';
 import { DiagonalGradient } from './gradient';
@@ -11,6 +12,8 @@ interface AvatarProps {
   ringColor?: string;
   ringWidth?: number;
   gradient?: readonly [string, string, ...string[]];
+  /** Real photo. Falls back to the gradient when absent. */
+  uri?: string;
 }
 
 /**
@@ -23,6 +26,7 @@ export function Avatar({
   ringColor,
   ringWidth = 3,
   gradient = gradients.avatar,
+  uri,
 }: AvatarProps) {
   return (
     <DiagonalGradient
@@ -38,7 +42,9 @@ export function Avatar({
         },
       ]}
     >
-      {initial ? (
+      {uri ? (
+        <Image source={{ uri }} style={styles.photo} contentFit="cover" />
+      ) : initial ? (
         <Text style={[styles.initial, { fontSize: size * 0.25 }]}>{initial}</Text>
       ) : null}
     </DiagonalGradient>
@@ -60,6 +66,10 @@ export function AvatarStack({ tints }: { tints: [string, string] }) {
 }
 
 const styles = StyleSheet.create({
+  photo: {
+    width: '100%',
+    height: '100%',
+  },
   circle: {
     alignItems: 'center',
     justifyContent: 'center',

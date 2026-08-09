@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Bell, Menu, MessageSquareText, Plus } from 'lucide-react-native';
+import { Bell, Menu, MessageSquareText, Plus, Search } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { colors, fontSizes, radii, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
@@ -29,6 +29,14 @@ export function AppHeader() {
               <Text style={styles.badgeText}>{unreadNotifications}</Text>
             </View>
           ) : null}
+        </Pressable>
+        <Pressable
+          onPress={() => router.push('/search')}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Αναζήτηση"
+        >
+          <Search size={20} color={colors.text} strokeWidth={1.9} />
         </Pressable>
       </View>
 
@@ -77,8 +85,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    // Reserve equal width on both sides so the logo stays optically centred.
-    minWidth: 78,
+    // Reserve equal width on both sides so the logo stays optically
+    // centred. The floor matches the wider (left) group.
+    minWidth: 92,
   },
   sideRight: {
     justifyContent: 'flex-end',

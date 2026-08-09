@@ -13,12 +13,24 @@ import { colors, gradients, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import type { MockPost } from '@/data/mock';
 import { findPersonByName } from '@/data/people';
+import { useAppState } from '@/state/app-state';
 import { AttachmentGrid } from './attachments';
 import { Avatar, AvatarStack } from './avatar';
 import { DiagonalGradient } from './gradient';
 
-export function PostCard({ post }: { post: MockPost }) {
+interface PostCardProps {
+  post: MockPost;
+  /** False on the post's own screen, where opening it again is a no-op. */
+  openable?: boolean;
+}
+
+export function PostCard({ post, openable = true }: PostCardProps) {
   const router = useRouter();
+  const { hasLiked, toggleLike, isPostSaved, toggleSavedPost } = useAppState();
+
+  const liked = hasLiked(post.id);
+  const saved = isPostSaved(post.id);
+  const openPost = () => router.push({ pathname: '/post/[id]', params: { id: post.id } });
   // Only seeded authors have a profile; posts written in the app are the
   // signed-in user's own, so there is nothing to open.
   const person = findPersonByName(post.author);
@@ -68,12 +80,35 @@ export function PostCard({ post }: { post: MockPost }) {
 
       <View style={styles.actions}>
         <View style={styles.actionGroup}>
-          <ActionCount icon={Heart} count={post.likes} tint={colors.pink} filled />
-          <ActionCount icon={MessageCircle} count={post.comments} tint={colors.textSecondary} />
-          <ActionCount icon={Send} count={post.shares} tint={colors.textSecondary} />
+          <ActionCount
+            icon={Heart}
+            count={post.likes + (liked ? 1 : 0)}
+            tint={colors.pink}
+            filled={liked}
+            onPress={() => toggleLike(post.id)}
+            label={liked ? 'Δεν μου αρέσει πια' : 'Μου αρέσει'}
+          />
+          <ActionCount
+            icon={MessageCircle}
+            count={post.comments}
+            tint={colors.textSecondary}
+            onPress={openable ? openPost : undefined}
+            label="Σχόλια"
+          />
+          <ActionCount icon={Send} count={post.shares} tint={colors.textSecondary} label="Κοινοποίηση" />
         </View>
-        <Pressable hitSlop={8} accessibilityRole="button" accessibilityLabel="Αποθήκευση">
-          <Bookmark size={19} color={colors.textSecondary} />
+        <Pressable
+          onPress={() => toggleSavedPost(post.id)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={saved ? 'Αφαίρεση από τα αποθηκευμένα' : 'Αποθήκευση'}
+          accessibilityState={{ selected: saved }}
+        >
+          <Bookmark
+            size={19}
+            color={saved ? colors.pink : colors.textSecondary}
+            fill={saved ? colors.pink : 'transparent'}
+          />
         </Pressable>
       </View>
 
@@ -84,14 +119,18 @@ export function PostCard({ post }: { post: MockPost }) {
         </View>
       ) : null}
 
-      {post.commentPreviews.map((comment) => (
-        <Text key={comment.author} style={styles.comment}>
-          <Text style={styles.commentAuthor}>{comment.author}</Text> {comment.text}
-        </Text>
-      ))}
+      {/* The post's own screen lists every comment below, so the preview
+          would only repeat them. */}
+      {openable
+        ? post.commentPreviews.map((comment) => (
+            <Text key={comment.author} style={styles.comment}>
+              <Text style={styles.commentAuthor}>{comment.author}</Text> {comment.text}
+            </Text>
+          ))
+        : null}
 
-      {post.totalComments > 0 ? (
-        <Pressable accessibilityRole="button">
+      {post.totalComments > 0 && openable ? (
+        <Pressable onPress={openPost} accessibilityRole="button">
           <Text style={styles.moreComments}>Δείτε και τα {post.totalComments} σχόλια</Text>
         </Pressable>
       ) : null}
@@ -102,13 +141,21 @@ export function PostCard({ post }: { post: MockPost }) {
 interface ActionCountProps {
   icon: LucideIcon;
   count: number;
+  onPress?: () => void;
+  label?: string;
   tint: string;
   filled?: boolean;
 }
 
-function ActionCount({ icon: Icon, count, tint, filled }: ActionCountProps) {
+function ActionCount({ icon: Icon, count, tint, filled, onPress, label }: ActionCountProps) {
   return (
-    <Pressable style={styles.action} accessibilityRole="button">
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={styles.action}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
       <Icon size={18} color={tint} strokeWidth={1.8} fill={filled ? colors.pinkTint : 'transparent'} />
       <Text style={styles.actionCount}>{count}</Text>
     </Pressable>
