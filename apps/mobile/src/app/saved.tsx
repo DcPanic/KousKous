@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -5,7 +6,9 @@ import { ArrowLeft, Bookmark, Heart, MessageCircle } from 'lucide-react-native';
 import { colors, findCategory, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { findThread, type ForumThread } from '@/data/forum';
+import { posts, type MockPost } from '@/data/mock';
 import { useAppState } from '@/state/app-state';
+import { PostCard } from '@/components/post-card';
 
 /**
  * Saved threads, so a member can come back to a conversation she wants to
@@ -13,7 +16,16 @@ import { useAppState } from '@/state/app-state';
  */
 export default function SavedScreen() {
   const router = useRouter();
-  const { savedThreadIds, createdThreads, toggleSaved, repliesFor } = useAppState();
+  const {
+    savedThreadIds,
+    savedPostIds,
+    createdThreads,
+    createdPosts,
+    toggleSaved,
+    repliesFor,
+  } = useAppState();
+
+  const [tab, setTab] = useState<'threads' | 'posts'>('threads');
 
   const threads = savedThreadIds
     .map(
@@ -21,6 +33,13 @@ export default function SavedScreen() {
         createdThreads.find((thread) => thread.id === id) ?? findThread(id),
     )
     .filter((thread): thread is ForumThread => thread !== undefined);
+
+  const savedPosts = savedPostIds
+    .map(
+      (id) =>
+        createdPosts.find((post) => post.id === id) ?? posts.find((post) => post.id === id),
+    )
+    .filter((post): post is MockPost => post !== undefined);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -36,13 +55,57 @@ export default function SavedScreen() {
         <View>
           <Text style={styles.headerTitle}>Αγαπημένα</Text>
           <Text style={styles.headerMeta}>
-            {threads.length === 1 ? '1 συζήτηση' : `${threads.length} συζητήσεις`}
+            {threads.length + savedPosts.length === 1
+              ? '1 αποθηκευμένο'
+              : `${threads.length + savedPosts.length} αποθηκευμένα`}
           </Text>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-        {threads.map((thread) => {
+      <View style={styles.tabs}>
+        {(
+          [
+            ['threads', `Συζητήσεις · ${threads.length}`],
+            ['posts', `Δημοσιεύσεις · ${savedPosts.length}`],
+          ] as const
+        ).map(([key, label]) => {
+          const active = key === tab;
+          return (
+            <Pressable
+              key={key}
+              onPress={() => setTab(key)}
+              style={[styles.tab, active && styles.tabActive]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+            >
+              <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <ScrollView
+        contentContainerStyle={tab === 'threads' ? styles.list : styles.postList}
+        showsVerticalScrollIndicator={false}
+      >
+        {tab === 'posts' ? (
+          <>
+            {savedPosts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+            {savedPosts.length === 0 ? (
+              <View style={styles.empty}>
+                <Bookmark size={26} color={colors.textFaint} />
+                <Text style={styles.emptyTitle}>Δεν έχεις αποθηκεύσει καμία δημοσίευση</Text>
+                <Text style={styles.emptyBody}>
+                  Πάτα τον σελιδοδείκτη σε μια δημοσίευση για να την κρατήσεις εδώ.
+                </Text>
+              </View>
+            ) : null}
+          </>
+        ) : null}
+
+        {tab === 'threads' ? threads.map((thread) => {
           const category = findCategory(thread.categoryId);
           const replyCount = thread.replies.length + repliesFor(thread.id).length;
 
@@ -86,9 +149,9 @@ export default function SavedScreen() {
               </View>
             </Pressable>
           );
-        })}
+        }) : null}
 
-        {threads.length === 0 ? (
+        {tab === 'threads' && threads.length === 0 ? (
           <View style={styles.empty}>
             <Bookmark size={26} color={colors.textFaint} />
             <Text style={styles.emptyTitle}>Δεν έχεις αποθηκεύσει καμία συζήτηση</Text>
@@ -107,6 +170,36 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.cream,
+  },
+  tabs: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: spacing.screen,
+    paddingBottom: spacing.md,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    borderRadius: radii.full,
+    borderWidth: 1.3,
+    borderColor: colors.borderChip,
+    backgroundColor: colors.surface,
+    paddingVertical: 8,
+  },
+  tabActive: {
+    borderColor: colors.pink,
+    backgroundColor: colors.pinkSoft,
+  },
+  tabLabel: {
+    fontSize: 11.5,
+    fontFamily: font.bold,
+    color: colors.textMuted,
+  },
+  tabLabelActive: {
+    color: colors.pinkDark,
+  },
+  postList: {
+    paddingBottom: spacing.xxl,
   },
   header: {
     flexDirection: 'row',

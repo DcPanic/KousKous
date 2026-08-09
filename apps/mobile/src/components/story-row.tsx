@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Heart, Plus } from 'lucide-react-native';
 import { colors, gradients, layout, radii, spacing } from '@kouskous/shared';
@@ -9,13 +10,20 @@ const SIZE = layout.storyAvatar;
 
 /** Horizontal stories rail. The first slot always belongs to the viewer. */
 export function StoryRow() {
+  const router = useRouter();
+
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.content}
     >
-      <Pressable style={styles.item} accessibilityRole="button" accessibilityLabel="Η ιστορία σας">
+      <Pressable
+        onPress={() => router.push('/create')}
+        style={styles.item}
+        accessibilityRole="button"
+        accessibilityLabel="Η ιστορία σας"
+      >
         <View style={styles.ownStory}>
           <Heart size={20} color={colors.pink} fill={colors.pink} />
           <View style={styles.addBadge}>
@@ -26,7 +34,13 @@ export function StoryRow() {
       </Pressable>
 
       {stories.map((story) => (
-        <Pressable key={story.id} style={styles.item} accessibilityRole="button">
+        <Pressable
+          key={story.id}
+          onPress={() => router.push({ pathname: '/story/[id]', params: { id: story.id } })}
+          style={styles.item}
+          accessibilityRole="button"
+          accessibilityLabel={`Ιστορία: ${story.name}`}
+        >
           <DiagonalGradient colors={gradients.avatar} style={styles.ring}>
             <View style={styles.ringInner} />
             {story.live ? (

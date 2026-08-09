@@ -170,7 +170,14 @@ export function DrawerMenu() {
               router.push('/rewards');
             }}
           />
-          <DrawerRow icon={UserPlus} label="Φίλες" />
+          <DrawerRow
+            icon={UserPlus}
+            label="Φίλες"
+            onPress={() => {
+              closeDrawer();
+              router.push('/friends');
+            }}
+          />
           <DrawerRow
             icon={Sparkles}
             label="Γίνε Premium Host"
@@ -187,8 +194,22 @@ export function DrawerMenu() {
               router.push('/settings');
             }}
           />
-          <DrawerRow icon={HelpCircle} label="Βοήθεια" />
-          <DrawerRow icon={LogOut} label="Αποσύνδεση" />
+          <DrawerRow
+            icon={HelpCircle}
+            label="Βοήθεια"
+            onPress={() => {
+              closeDrawer();
+              router.push('/help');
+            }}
+          />
+          <DrawerRow
+            icon={LogOut}
+            label="Αποσύνδεση"
+            onPress={() => {
+              closeDrawer();
+              router.replace('/welcome');
+            }}
+          />
         </ScrollView>
       </Animated.View>
     </View>

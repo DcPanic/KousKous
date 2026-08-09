@@ -8,10 +8,19 @@ import { daysUntilSaturday, isoDaysFromNow } from '@/lib/date';
  * close to the domain entities so swapping the source is a local change.
  */
 
+export interface StoryFrame {
+  id: string;
+  /** Flat tint standing in for the photo until media storage exists. */
+  tint: string;
+  caption: string;
+}
+
 export interface MockStory {
   id: string;
   name: string;
   live: boolean;
+  timeAgo: string;
+  frames: StoryFrame[];
 }
 
 export interface MockComment {
@@ -47,12 +56,52 @@ export interface MockForum {
 }
 
 export const stories: MockStory[] = [
-  { id: 's1', name: 'Ελένη', live: false },
-  { id: 's2', name: 'Μαρία', live: true },
-  { id: 's3', name: 'Κατερίνα', live: false },
-  { id: 's4', name: 'Σοφία', live: false },
-  { id: 's5', name: 'Νίκη', live: false },
+  {
+    id: 's1',
+    name: 'Ελένη',
+    live: false,
+    timeAgo: '2 ώρες',
+    frames: [
+      { id: 's1f1', tint: '#FBE1E9', caption: 'Πρωινό στη Γλυφάδα ☕' },
+      { id: 's1f2', tint: '#F5E6BE', caption: 'Και μετά θάλασσα 🌊' },
+    ],
+  },
+  {
+    id: 's2',
+    name: 'Μαρία',
+    live: true,
+    timeAgo: 'τώρα',
+    frames: [{ id: 's2f1', tint: '#EADFF0', caption: 'Live από το workshop!' }],
+  },
+  {
+    id: 's3',
+    name: 'Κατερίνα',
+    live: false,
+    timeAgo: '5 ώρες',
+    frames: [
+      { id: 's3f1', tint: '#DCEAF5', caption: 'Νέο βιβλίο 📚' },
+      { id: 's3f2', tint: '#E4F0E8', caption: 'Προτάσεις;' },
+    ],
+  },
+  {
+    id: 's4',
+    name: 'Σοφία',
+    live: false,
+    timeAgo: '8 ώρες',
+    frames: [{ id: 's4f1', tint: '#F0E4D8', caption: 'Ηλιοβασίλεμα στη Σαντορίνη' }],
+  },
+  {
+    id: 's5',
+    name: 'Νίκη',
+    live: false,
+    timeAgo: '11 ώρες',
+    frames: [{ id: 's5f1', tint: '#FBE1E9', caption: 'Girls night 💕' }],
+  },
 ];
+
+export function findStory(id: string): MockStory | undefined {
+  return stories.find((story) => story.id === id);
+}
 
 export const posts: MockPost[] = [
   {

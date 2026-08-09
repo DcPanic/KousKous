@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
@@ -17,6 +18,7 @@ import { useAppState } from '@/state/app-state';
 import { AttachmentGrid } from './attachments';
 import { Avatar, AvatarStack } from './avatar';
 import { DiagonalGradient } from './gradient';
+import { PostOptionsSheet } from './post-options-sheet';
 
 interface PostCardProps {
   post: MockPost;
@@ -27,6 +29,8 @@ interface PostCardProps {
 export function PostCard({ post, openable = true }: PostCardProps) {
   const router = useRouter();
   const { hasLiked, toggleLike, isPostSaved, toggleSavedPost } = useAppState();
+
+  const [optionsOpen, setOptionsOpen] = useState(false);
 
   const liked = hasLiked(post.id);
   const saved = isPostSaved(post.id);
@@ -58,10 +62,22 @@ export function PostCard({ post, openable = true }: PostCardProps) {
             </Text>
           </View>
         </Pressable>
-        <Pressable hitSlop={8} accessibilityRole="button" accessibilityLabel="Περισσότερα">
+        <Pressable
+          onPress={() => setOptionsOpen(true)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Περισσότερα"
+        >
           <MoreHorizontal size={18} color={colors.textMuted} />
         </Pressable>
       </View>
+
+      <PostOptionsSheet
+        visible={optionsOpen}
+        onClose={() => setOptionsOpen(false)}
+        postId={post.id}
+        author={post.author}
+      />
 
       {post.caption.length > 0 ? <Text style={styles.caption}>{post.caption}</Text> : null}
       {post.hashtags.length > 0 ? <Text style={styles.hashtags}>{post.hashtags}</Text> : null}

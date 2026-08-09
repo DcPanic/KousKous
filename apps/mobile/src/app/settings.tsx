@@ -31,7 +31,9 @@ import {
   toGreekUpperCase,
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
+import { useAppState } from '@/state/app-state';
 import { useSession } from '@/state/session';
+import { LanguageSheet } from '@/components/language-sheet';
 
 const TIER_LABELS: Record<ReturnType<typeof accountTier>, string> = {
   free: 'Δωρεάν λογαριασμός',
@@ -45,6 +47,7 @@ const MONTHLY_PRICE = `€${PAID_MEMBER_PRICE_EUR.toFixed(2).replace('.', ',')}/
 export default function SettingsScreen() {
   const router = useRouter();
   const { user } = useSession();
+  const { blockedNames } = useAppState();
   const tier = accountTier(user);
 
   // Preferences are local until the backend stores them; the switches are
@@ -55,6 +58,7 @@ export default function SettingsScreen() {
   const [emailDigest, setEmailDigest] = useState(false);
   const [showLocation, setShowLocation] = useState(true);
   const [discoverable, setDiscoverable] = useState(true);
+  const [languageOpen, setLanguageOpen] = useState(false);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -85,8 +89,18 @@ export default function SettingsScreen() {
           label="Επεξεργασία προφίλ"
           onPress={() => router.push('/edit-profile')}
         />
-        <Row icon={Mail} label="Email" value={user.email ?? '—'} />
-        <Row icon={MapPin} label="Περιοχή" value={findPlace(user.location ?? '')?.name ?? '—'} />
+        <Row
+          icon={Mail}
+          label="Email"
+          value={user.email ?? '—'}
+          onPress={() => router.push('/edit-profile')}
+        />
+        <Row
+          icon={MapPin}
+          label="Περιοχή"
+          value={findPlace(user.location ?? '')?.name ?? '—'}
+          onPress={() => router.push('/edit-profile')}
+        />
 
         <Section label="Συνδρομή" />
         {tier === 'free' ? (
@@ -124,15 +138,24 @@ export default function SettingsScreen() {
         <Section label="Ιδιωτικότητα & ασφάλεια" />
         <ToggleRow icon={MapPin} label="Εμφάνιση περιοχής στο προφίλ" value={showLocation} onChange={setShowLocation} />
         <ToggleRow icon={Eye} label="Να με βρίσκουν στην αναζήτηση" value={discoverable} onChange={setDiscoverable} />
-        <Row icon={ShieldCheck} label="Αποκλεισμένες χρήστριες" value="0" />
+        <Row
+          icon={ShieldCheck}
+          label="Αποκλεισμένες χρήστριες"
+          value={String(blockedNames.length)}
+          onPress={() => router.push('/blocked')}
+        />
         <Text style={styles.note}>
           Το KousKous είναι κοινότητα μόνο για γυναίκες. Κάθε αναφορά ελέγχεται από την ομάδα μας.
         </Text>
 
         <Section label="Εφαρμογή" />
-        <Row icon={Globe} label="Γλώσσα" value="Ελληνικά" />
-        <Row icon={HelpCircle} label="Βοήθεια & επικοινωνία" />
-        <Row icon={FileText} label="Όροι χρήσης & απόρρητο" />
+        <Row icon={Globe} label="Γλώσσα" value="Ελληνικά" onPress={() => setLanguageOpen(true)} />
+        <Row
+          icon={HelpCircle}
+          label="Βοήθεια & επικοινωνία"
+          onPress={() => router.push('/help')}
+        />
+        <Row icon={FileText} label="Όροι χρήσης & απόρρητο" onPress={() => router.push('/legal')} />
 
         <Section label="" />
         <Pressable
@@ -150,6 +173,8 @@ export default function SettingsScreen() {
 
         <Text style={styles.version}>KousKous · έκδοση 0.1.0</Text>
       </ScrollView>
+
+      <LanguageSheet visible={languageOpen} onClose={() => setLanguageOpen(false)} />
     </SafeAreaView>
   );
 }

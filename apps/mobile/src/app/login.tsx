@@ -88,7 +88,11 @@ export default function LoginScreen() {
             </Pressable>
           </View>
 
-          <Pressable style={styles.forgot} accessibilityRole="button">
+          <Pressable
+            onPress={() => router.push('/help')}
+            style={styles.forgot}
+            accessibilityRole="button"
+          >
             <Text style={styles.forgotLabel}>Ξέχασα τον κωδικό μου</Text>
           </Pressable>
 

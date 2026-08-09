@@ -12,11 +12,14 @@ import { StoryRow } from '@/components/story-row';
 
 export default function FeedScreen() {
   const [tab, setTab] = useState<FeedTab>('foryou');
-  const { selectedPlaces, createdPosts, followedCategories } = useAppState();
+  const { selectedPlaces, createdPosts, followedCategories, blockedNames } = useAppState();
 
   const visiblePosts = useMemo(() => {
-    const inPlace = [...createdPosts, ...posts].filter((post) =>
-      matchesPlaces(post.location, selectedPlaces),
+    // Blocking a woman means not seeing her, so it runs before anything
+    // else and applies on every tab.
+    const inPlace = [...createdPosts, ...posts].filter(
+      (post) =>
+        !blockedNames.includes(post.author) && matchesPlaces(post.location, selectedPlaces),
     );
 
     // "Ακολουθείτε" narrows to the communities she follows; "Trending"
@@ -30,7 +33,7 @@ export default function FeedScreen() {
       return [...inPlace].sort((a, b) => b.likes - a.likes);
     }
     return inPlace;
-  }, [createdPosts, followedCategories, selectedPlaces, tab]);
+  }, [blockedNames, createdPosts, followedCategories, selectedPlaces, tab]);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>

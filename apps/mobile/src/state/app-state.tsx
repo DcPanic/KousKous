@@ -63,6 +63,13 @@ interface AppStateValue {
   hasJoined: (eventId: string) => boolean;
   toggleJoined: (eventId: string) => void;
 
+  /** Women she blocked and posts she reported, by author name. */
+  blockedNames: string[];
+  isBlocked: (name: string) => boolean;
+  toggleBlocked: (name: string) => void;
+  reportedPostIds: string[];
+  reportPost: (postId: string) => void;
+
   /** Posts she liked, and posts she bookmarked. */
   likedPostIds: string[];
   hasLiked: (postId: string) => boolean;
@@ -109,6 +116,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [joinedEventIds, setJoinedEventIds] = useState<string[]>([]);
   const [likedPostIds, setLikedPostIds] = useState<string[]>([]);
   const [savedPostIds, setSavedPostIds] = useState<string[]>([]);
+  const [blockedNames, setBlockedNames] = useState<string[]>([]);
+  const [reportedPostIds, setReportedPostIds] = useState<string[]>([]);
   const [createdThreads, setCreatedThreads] = useState<ForumThread[]>([]);
   const [createdPosts, setCreatedPosts] = useState<MockPost[]>([]);
   const [replies, setReplies] = useState<Record<string, ForumReply[]>>({});
@@ -202,6 +211,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const toggleBlocked = useCallback((name: string) => {
+    setBlockedNames((prev) =>
+      prev.includes(name) ? prev.filter((item) => item !== name) : [name, ...prev],
+    );
+  }, []);
+
+  const reportPost = useCallback((postId: string) => {
+    setReportedPostIds((prev) => (prev.includes(postId) ? prev : [postId, ...prev]));
+  }, []);
+
   const toggleLike = useCallback((postId: string) => {
     setLikedPostIds((prev) =>
       prev.includes(postId) ? prev.filter((item) => item !== postId) : [postId, ...prev],
@@ -266,6 +285,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       joinedEventIds,
       hasJoined: (eventId: string) => joinedEventIds.includes(eventId),
       toggleJoined,
+      blockedNames,
+      isBlocked: (name: string) => blockedNames.includes(name),
+      toggleBlocked,
+      reportedPostIds,
+      reportPost,
       likedPostIds,
       hasLiked: (postId: string) => likedPostIds.includes(postId),
       toggleLike,
@@ -303,6 +327,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toggleFollow,
       joinedEventIds,
       toggleJoined,
+      blockedNames,
+      toggleBlocked,
+      reportedPostIds,
+      reportPost,
       likedPostIds,
       toggleLike,
       savedPostIds,
