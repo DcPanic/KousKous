@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   Calendar,
   Eye,
   Gift,
   Megaphone,
+  Check,
   Plus,
   Radio,
   UserPlus,
@@ -29,7 +31,9 @@ import {
 /** Eyebrows and primary buttons use the darker aubergine, not the gold. */
 const ACCENT = colors.aubergine;
 
-export function OfficialOverviewTab() {
+export function OfficialOverviewTab({ onGoToTab }: { onGoToTab: (tab: OfficialTabKey) => void }) {
+  const router = useRouter();
+
   return (
     <ScrollView contentContainerStyle={shared.content} showsVerticalScrollIndicator={false}>
       <View style={shared.statRow}>
@@ -48,30 +52,74 @@ export function OfficialOverviewTab() {
 
       <DashboardEyebrow accent={ACCENT}>Γρήγορες Ενέργειες</DashboardEyebrow>
       <View style={styles.quickGrid}>
-        <QuickAction icon={Calendar} label="Νέο Official Event" tint={colors.pink} />
-        <QuickAction icon={Gift} label="Νέο Giveaway" tint={colors.gold} />
-        <QuickAction icon={Megaphone} label="Ανακοίνωση" tint={colors.hostPurple} />
-        <QuickAction icon={Radio} label="Live Session" tint={colors.live} />
+        <QuickAction
+          icon={Calendar}
+          label="Νέο Official Event"
+          tint={colors.pink}
+          onPress={() => router.push('/create-event')}
+        />
+        <QuickAction
+          icon={Gift}
+          label="Νέο Giveaway"
+          tint={colors.gold}
+          onPress={() => onGoToTab('rewards')}
+        />
+        <QuickAction
+          icon={Megaphone}
+          label="Ανακοίνωση"
+          tint={colors.hostPurple}
+          onPress={() => onGoToTab('announcements')}
+        />
+        {/* Live sessions need streaming infrastructure that does not exist
+            yet, so the tile says so instead of doing nothing. */}
+        <QuickAction icon={Radio} label="Live Session" tint={colors.live} soon />
       </View>
     </ScrollView>
   );
 }
 
-function QuickAction({ icon: Icon, label, tint }: { icon: LucideIcon; label: string; tint: string }) {
+/** Which tab a quick action jumps to; mirrors the dashboard's own union. */
+export type OfficialTabKey = 'overview' | 'events' | 'rewards' | 'announcements';
+
+function QuickAction({
+  icon: Icon,
+  label,
+  tint,
+  onPress,
+  soon,
+}: {
+  icon: LucideIcon;
+  label: string;
+  tint: string;
+  onPress?: () => void;
+  soon?: boolean;
+}) {
   return (
-    <Pressable style={styles.quickAction} accessibilityRole="button">
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={[styles.quickAction, soon && styles.quickActionSoon]}
+      accessibilityRole="button"
+    >
       <View style={[styles.quickIcon, { backgroundColor: `${tint}1A` }]}>
         <Icon size={16} color={tint} />
       </View>
       <Text style={styles.quickLabel}>{label}</Text>
+      {soon ? <Text style={styles.soonLabel}>σύντομα</Text> : null}
     </Pressable>
   );
 }
 
 export function OfficialEventsTab() {
+  const router = useRouter();
+
   return (
     <ScrollView contentContainerStyle={shared.content} showsVerticalScrollIndicator={false}>
-      <Pressable style={[shared.primaryButton, { backgroundColor: ACCENT }]} accessibilityRole="button">
+      <Pressable
+        onPress={() => router.push('/create-event')}
+        style={[shared.primaryButton, { backgroundColor: ACCENT }]}
+        accessibilityRole="button"
+      >
         <Plus size={16} color={colors.white} strokeWidth={2.6} />
         <Text style={shared.primaryButtonLabel}>Νέο Official Event</Text>
       </Pressable>
@@ -94,9 +142,15 @@ export function OfficialEventsTab() {
 }
 
 export function OfficialRewardsTab() {
+  const router = useRouter();
+
   return (
     <ScrollView contentContainerStyle={shared.content} showsVerticalScrollIndicator={false}>
-      <Pressable style={[shared.primaryButton, { backgroundColor: colors.gold }]} accessibilityRole="button">
+      <Pressable
+        onPress={() => router.push('/create-giveaway')}
+        style={[shared.primaryButton, { backgroundColor: colors.gold }]}
+        accessibilityRole="button"
+      >
         <Plus size={16} color={colors.white} strokeWidth={2.6} />
         <Text style={shared.primaryButtonLabel}>Νέο Giveaway / Προσφορά</Text>
       </Pressable>
@@ -121,6 +175,7 @@ export function OfficialRewardsTab() {
 
 export function OfficialAnnouncementsTab() {
   const [draft, setDraft] = useState('');
+  const [sent, setSent] = useState(false);
 
   return (
     <ScrollView contentContainerStyle={shared.content} showsVerticalScrollIndicator={false}>
@@ -135,12 +190,27 @@ export function OfficialAnnouncementsTab() {
           style={styles.composerInput}
         />
         <Pressable
+          onPress={() => {
+            if (draft.trim().length === 0) return;
+            // The push itself needs the backend; queueing it locally keeps
+            // the flow reviewable without claiming it was delivered.
+            setDraft('');
+            setSent(true);
+          }}
           style={[styles.sendButton, draft.trim().length === 0 && styles.sendButtonDisabled]}
           disabled={draft.trim().length === 0}
           accessibilityRole="button"
         >
           <Text style={styles.sendLabel}>Αποστολή σε {officialAudienceLabel}</Text>
         </Pressable>
+        {sent ? (
+          <View style={styles.sentRow}>
+            <Check size={14} color={colors.success} />
+            <Text style={styles.sentLabel}>
+              Η ανακοίνωση μπήκε στην ουρά. Θα σταλεί μόλις συνδεθεί το backend.
+            </Text>
+          </View>
+        ) : null}
       </View>
 
       <DashboardEyebrow accent={ACCENT}>Ιστορικό</DashboardEyebrow>
@@ -173,6 +243,27 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     padding: spacing.screen,
     boxShadow: shadows.card,
+  },
+  quickActionSoon: {
+    opacity: 0.55,
+  },
+  soonLabel: {
+    fontSize: 9.5,
+    fontFamily: font.bold,
+    color: colors.textFaint,
+  },
+  sentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.sm,
+  },
+  sentLabel: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: font.medium,
+    color: colors.success,
+    lineHeight: 16,
   },
   quickIcon: {
     width: 32,

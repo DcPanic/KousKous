@@ -22,6 +22,7 @@ import {
   hostReviews,
   hostStats,
 } from '@/data/dashboard-mock';
+import { CheckInSheet } from '@/components/check-in-sheet';
 import { DiagonalGradient } from '@/components/gradient';
 import {
   DashboardEyebrow,
@@ -91,6 +92,8 @@ export function HostOverviewTab({ paymentVerified }: TabProps) {
 export function HostEventsTab() {
   const router = useRouter();
   const [scope, setScope] = useState<'upcoming' | 'past'>('upcoming');
+  // Which event's door list is open, and whether the QR button opened it.
+  const [checkIn, setCheckIn] = useState<{ title: string; scanning: boolean } | null>(null);
 
   return (
     <ScrollView contentContainerStyle={shared.content} showsVerticalScrollIndicator={false}>
@@ -132,16 +135,33 @@ export function HostEventsTab() {
           <View style={styles.cardFooter}>
             <Text style={styles.revenue}>{event.revenue}</Text>
             <View style={styles.iconButtons}>
-              <Pressable style={styles.iconButton} accessibilityRole="button" accessibilityLabel="QR check-in">
+              <Pressable
+                onPress={() => setCheckIn({ title: event.title, scanning: true })}
+                style={styles.iconButton}
+                accessibilityRole="button"
+                accessibilityLabel="QR check-in"
+              >
                 <QrCode size={14} color={ACCENT} />
               </Pressable>
-              <Pressable style={styles.iconButton} accessibilityRole="button" accessibilityLabel="Λίστα συμμετεχουσών">
+              <Pressable
+                onPress={() => setCheckIn({ title: event.title, scanning: false })}
+                style={styles.iconButton}
+                accessibilityRole="button"
+                accessibilityLabel="Λίστα συμμετεχουσών"
+              >
                 <Users size={14} color={ACCENT} />
               </Pressable>
             </View>
           </View>
         </View>
       ))}
+
+      <CheckInSheet
+        visible={checkIn !== null}
+        onClose={() => setCheckIn(null)}
+        eventTitle={checkIn?.title ?? ''}
+        scanning={checkIn?.scanning}
+      />
     </ScrollView>
   );
 }

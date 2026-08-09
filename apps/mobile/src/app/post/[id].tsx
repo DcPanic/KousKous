@@ -35,6 +35,7 @@ export default function PostScreen() {
   const { createdPosts, commentsFor, addComment } = useAppState();
 
   const [draft, setDraft] = useState('');
+  const [likedComments, setLikedComments] = useState<string[]>([]);
 
   const postId = typeof id === 'string' ? id : '';
   const post = createdPosts.find((item) => item.id === postId) ?? posts.find((item) => item.id === postId);
@@ -86,8 +87,10 @@ export default function PostScreen() {
 
           {comments.map((comment, index) => {
             const person = findPersonByName(comment.author);
+            const key = `${comment.author}-${index}`;
+            const likedComment = likedComments.includes(key);
             return (
-              <View key={`${comment.author}-${index}`} style={styles.comment}>
+              <View key={key} style={styles.comment}>
                 <Pressable
                   onPress={() =>
                     person
@@ -104,8 +107,22 @@ export default function PostScreen() {
                   <Text style={styles.commentAuthor}>{comment.author}</Text>
                   <Text style={styles.commentText}>{comment.text}</Text>
                 </View>
-                <Pressable hitSlop={8} accessibilityRole="button" accessibilityLabel="Μου αρέσει">
-                  <Heart size={15} color={colors.textMuted} />
+                <Pressable
+                  onPress={() =>
+                    setLikedComments((prev) =>
+                      prev.includes(key) ? prev.filter((item) => item !== key) : [key, ...prev],
+                    )
+                  }
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={likedComment ? 'Δεν μου αρέσει πια' : 'Μου αρέσει'}
+                  accessibilityState={{ selected: likedComment }}
+                >
+                  <Heart
+                    size={15}
+                    color={likedComment ? colors.pink : colors.textMuted}
+                    fill={likedComment ? colors.pink : 'transparent'}
+                  />
                 </Pressable>
               </View>
             );

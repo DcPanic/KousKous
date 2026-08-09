@@ -46,7 +46,7 @@ export default function OfficialDashboardScreen() {
       <DashboardHeader title="Official Dashboard" subtitle="KousKous" />
 
       <View style={dashboardStyles.screen}>
-        {tab === 'overview' ? <OfficialOverviewTab /> : null}
+        {tab === 'overview' ? <OfficialOverviewTab onGoToTab={setTab} /> : null}
         {tab === 'events' ? <OfficialEventsTab /> : null}
         {tab === 'rewards' ? <OfficialRewardsTab /> : null}
         {tab === 'announcements' ? <OfficialAnnouncementsTab /> : null}

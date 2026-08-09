@@ -33,6 +33,7 @@ import {
 import { font } from '@/theme/typography';
 import { useAppState } from '@/state/app-state';
 import { useSession } from '@/state/session';
+import { ConfirmSheet } from '@/components/confirm-sheet';
 import { LanguageSheet } from '@/components/language-sheet';
 
 const TIER_LABELS: Record<ReturnType<typeof accountTier>, string> = {
@@ -59,6 +60,7 @@ export default function SettingsScreen() {
   const [showLocation, setShowLocation] = useState(true);
   const [discoverable, setDiscoverable] = useState(true);
   const [languageOpen, setLanguageOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -166,7 +168,11 @@ export default function SettingsScreen() {
           <LogOut size={17} color={colors.text} />
           <Text style={styles.dangerLabel}>Αποσύνδεση</Text>
         </Pressable>
-        <Pressable style={styles.dangerRow} accessibilityRole="button">
+        <Pressable
+          onPress={() => setDeleteOpen(true)}
+          style={styles.dangerRow}
+          accessibilityRole="button"
+        >
           <Trash2 size={17} color={colors.danger} />
           <Text style={[styles.dangerLabel, styles.deleteLabel]}>Διαγραφή λογαριασμού</Text>
         </Pressable>
@@ -175,6 +181,18 @@ export default function SettingsScreen() {
       </ScrollView>
 
       <LanguageSheet visible={languageOpen} onClose={() => setLanguageOpen(false)} />
+
+      <ConfirmSheet
+        visible={deleteOpen}
+        title="Διαγραφή λογαριασμού"
+        body="Θα σβηστούν το προφίλ, οι δημοσιεύσεις και οι συζητήσεις σου. Δεν γίνεται αναίρεση."
+        confirmLabel="Διαγραφή οριστικά"
+        onCancel={() => setDeleteOpen(false)}
+        onConfirm={() => {
+          setDeleteOpen(false);
+          router.replace('/welcome');
+        }}
+      />
     </SafeAreaView>
   );
 }
