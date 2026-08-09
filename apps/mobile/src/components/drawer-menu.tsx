@@ -58,7 +58,7 @@ const tierLabels: Record<AccountTier, { text: string; color: string }> = {
  */
 export function DrawerMenu() {
   const { drawerOpen, closeDrawer, isFollowing, toggleFollow } = useAppState();
-  const { user, tier } = useSession();
+  const { user, tier, signOut } = useSession();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -207,7 +207,7 @@ export function DrawerMenu() {
             label="Αποσύνδεση"
             onPress={() => {
               closeDrawer();
-              router.replace('/welcome');
+              void signOut().then(() => router.replace('/welcome'));
             }}
           />
         </ScrollView>
@@ -266,7 +266,12 @@ function DrawerRow({ emoji, icon: Icon, label, following, onToggle, onPress }: D
  * Delete this together with the mock session provider.
  */
 function TierSwitcher() {
-  const { tier, setTier } = useSession();
+  const { tier, setTier, signedIn } = useSession();
+
+  // A real profile comes from the database; overriding it here would only
+  // lie about what the account can do.
+  if (signedIn) return null;
+
   const options: [AccountTier, string][] = [
     ['free', 'Free'],
     ['paid', 'Μέλος'],

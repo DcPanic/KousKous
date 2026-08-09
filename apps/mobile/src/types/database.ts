@@ -1,13 +1,18 @@
 /**
  * Database shape, mirroring supabase/migrations/0001_init.sql.
  *
+ * The row types are object type aliases, not interfaces: an interface has
+ * no implicit index signature, so it fails the library's
+ * `Record<string, unknown>` constraint and silently collapses every query
+ * type to `never`.
+ *
  * Hand-written rather than generated, because generating requires the
  * Supabase CLI against the live project. Keep it in step with the
  * migrations by hand — the client is typed against it, so a mismatch
  * shows up as a TypeScript error rather than a runtime surprise.
  */
 
-export interface ProfileRow {
+export type ProfileRow = {
   id: string;
   name: string;
   bio: string | null;
@@ -27,7 +32,7 @@ export interface ProfileRow {
   created_at: string;
 }
 
-export interface PostRow {
+export type PostRow = {
   id: string;
   author_id: string;
   caption: string;
@@ -37,7 +42,7 @@ export interface PostRow {
   created_at: string;
 }
 
-export interface CommentRow {
+export type CommentRow = {
   id: string;
   post_id: string;
   author_id: string;
@@ -45,7 +50,7 @@ export interface CommentRow {
   created_at: string;
 }
 
-export interface ThreadRow {
+export type ThreadRow = {
   id: string;
   category_id: string;
   author_id: string;
@@ -56,7 +61,7 @@ export interface ThreadRow {
   created_at: string;
 }
 
-export interface ThreadReplyRow {
+export type ThreadReplyRow = {
   id: string;
   thread_id: string;
   author_id: string;
@@ -64,7 +69,7 @@ export interface ThreadReplyRow {
   created_at: string;
 }
 
-export interface EventRow {
+export type EventRow = {
   id: string;
   host_id: string;
   title: string;
@@ -81,7 +86,7 @@ export interface EventRow {
   created_at: string;
 }
 
-export interface MessageRow {
+export type MessageRow = {
   id: string;
   conversation_id: string;
   sender_id: string;
@@ -90,7 +95,7 @@ export interface MessageRow {
   created_at: string;
 }
 
-export interface RewardRow {
+export type RewardRow = {
   id: string;
   title: string;
   partner: string;
@@ -123,9 +128,12 @@ export interface Database {
       messages: Table<MessageRow, 'id' | 'created_at' | 'body'>;
       rewards: Table<RewardRow, 'id' | 'created_at'>;
     };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
-    Enums: Record<string, never>;
-    CompositeTypes: Record<string, never>;
+    // The canonical "empty" form used by Supabase's own generated types.
+    // Record<string, never> is not assignable to the library's generic
+    // schema, which silently degrades every query to `never`.
+    Views: { [_ in never]: never };
+    Functions: { [_ in never]: never };
+    Enums: { [_ in never]: never };
+    CompositeTypes: { [_ in never]: never };
   };
 }

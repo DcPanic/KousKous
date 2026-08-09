@@ -22,6 +22,8 @@ import {
   toGreekUpperCase,
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
+import { greekAuthError } from '@/lib/auth-errors';
+import { supabase } from '@/lib/supabase';
 
 const MIN_PASSWORD = 8;
 
@@ -36,6 +38,9 @@ export default function SignupScreen() {
   const [placeId, setPlaceId] = useState<string | null>(null);
   const [womenOnly, setWomenOnly] = useState(false);
   const [terms, setTerms] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
   const suggestions = useMemo(() => {
     if (placeQuery.trim().length < 2) return [];
@@ -47,10 +52,34 @@ export default function SignupScreen() {
   const canSubmit =
     name.trim().length > 1 && emailValid && passwordValid && placeId !== null && womenOnly && terms;
 
-  const submit = () => {
-    if (!canSubmit) return;
-    // Creating the account needs Supabase auth. Until it exists the flow
-    // ends here rather than pretending an account was made.
+
+  const submit = async () => {
+    if (!canSubmit || submitting) return;
+
+    setSubmitting(true);
+    setFormError(null);
+
+    // The name and place ride along as metadata; the database trigger
+    // turns them into the profile row.
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: { data: { name: name.trim(), location: placeId } },
+    });
+
+    setSubmitting(false);
+
+    if (error) {
+      setFormError(greekAuthError(error.message));
+      return;
+    }
+
+    // With email confirmation on, Supabase returns a user but no session.
+    if (!data.session) {
+      setNeedsConfirmation(true);
+      return;
+    }
+
     router.replace('/');
   };
 
@@ -183,23 +212,34 @@ export default function SignupScreen() {
             />
           </View>
 
-          <View style={styles.notice}>
-            <Info size={15} color={colors.pinkDark} />
-            <Text style={styles.noticeLabel}>
-              Ο λογαριασμός δεν αποθηκεύεται ακόμα — η σύνδεση με τη βάση (Supabase) δεν έχει
-              ενεργοποιηθεί. Μέχρι τότε το κουμπί σε βάζει στην εφαρμογή για να τη δεις.
-            </Text>
-          </View>
+          {formError ? (
+            <View style={styles.errorBox}>
+              <Info size={15} color={colors.danger} />
+              <Text style={styles.errorBoxLabel}>{formError}</Text>
+            </View>
+          ) : null}
+
+          {needsConfirmation ? (
+            <View style={styles.notice}>
+              <Info size={15} color={colors.pinkDark} />
+              <Text style={styles.noticeLabel}>
+                Σου στείλαμε email επιβεβαίωσης στο {email.trim()}. Άνοιξέ το, πάτα τον σύνδεσμο
+                και μετά κάνε σύνδεση.
+              </Text>
+            </View>
+          ) : null}
         </ScrollView>
 
         <View style={styles.footer}>
           <Pressable
-            onPress={submit}
-            disabled={!canSubmit}
+            onPress={() => void submit()}
+            disabled={!canSubmit || submitting}
             style={[styles.submit, !canSubmit && styles.submitDisabled]}
             accessibilityRole="button"
           >
-            <Text style={styles.submitLabel}>Συνέχεια</Text>
+            <Text style={styles.submitLabel}>
+              {submitting ? 'Δημιουργία...' : 'Συνέχεια'}
+            </Text>
           </Pressable>
           <Pressable
             onPress={() => router.replace('/login')}
@@ -366,6 +406,21 @@ const styles = StyleSheet.create({
     fontFamily: font.medium,
     color: colors.textBody,
     lineHeight: 18,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    backgroundColor: '#FBE4E4',
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    marginTop: spacing.lg,
+  },
+  errorBoxLabel: {
+    flex: 1,
+    fontSize: 11.5,
+    fontFamily: font.bold,
+    color: colors.danger,
+    lineHeight: 17,
   },
   notice: {
     flexDirection: 'row',

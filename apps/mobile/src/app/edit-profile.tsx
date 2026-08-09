@@ -23,6 +23,7 @@ import {
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { pickMedia } from '@/lib/media';
+import { supabase } from '@/lib/supabase';
 import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
 
@@ -31,7 +32,7 @@ const MAX_INTERESTS = 5;
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { user } = useSession();
+  const { user, signedIn, refreshProfile } = useSession();
 
   const [name, setName] = useState(user.name);
   const [bio, setBio] = useState(user.bio ?? '');
@@ -40,6 +41,8 @@ export default function EditProfileScreen() {
   const [placeQuery, setPlaceQuery] = useState('');
   const [editingPlace, setEditingPlace] = useState(false);
   const [interests, setInterests] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const suggestions = useMemo(() => {
     if (placeQuery.trim().length < 2) return [];
@@ -61,10 +64,36 @@ export default function EditProfileScreen() {
     });
   };
 
-  const save = () => {
-    if (!canSave) return;
-    // Saving needs Supabase; until then the screen closes without
-    // pretending the profile was updated.
+  const save = async () => {
+    if (!canSave || saving) return;
+
+    // Signed out, this is the preview account — there is no row to write.
+    if (!signedIn) {
+      router.back();
+      return;
+    }
+
+    setSaving(true);
+    setSaveError(null);
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        name: name.trim(),
+        bio: bio.trim() || null,
+        location: placeId,
+        avatar_url: avatarUri ?? null,
+      })
+      .eq('id', user.id);
+
+    if (error) {
+      setSaving(false);
+      setSaveError('Δεν αποθηκεύτηκε. Έλεγξε τη σύνδεσή σου και δοκίμασε ξανά.');
+      return;
+    }
+
+    await refreshProfile();
+    setSaving(false);
     router.back();
   };
 
@@ -81,12 +110,12 @@ export default function EditProfileScreen() {
         </Pressable>
         <Text style={styles.headerTitle}>Επεξεργασία προφίλ</Text>
         <Pressable
-          onPress={save}
-          disabled={!canSave}
+          onPress={() => void save()}
+          disabled={!canSave || saving}
           style={[styles.save, !canSave && styles.saveDisabled]}
           accessibilityRole="button"
         >
-          <Text style={styles.saveLabel}>Αποθήκευση</Text>
+          <Text style={styles.saveLabel}>{saving ? 'Γίνεται...' : 'Αποθήκευση'}</Text>
         </Pressable>
       </View>
 
@@ -206,13 +235,22 @@ export default function EditProfileScreen() {
             })}
           </View>
 
-          <View style={styles.notice}>
-            <Info size={15} color={colors.pinkDark} />
-            <Text style={styles.noticeLabel}>
-              Οι αλλαγές δεν αποθηκεύονται ακόμα — η σύνδεση με τη βάση (Supabase) δεν έχει
-              ενεργοποιηθεί.
-            </Text>
-          </View>
+          {saveError ? (
+            <View style={styles.errorBox}>
+              <Info size={15} color={colors.danger} />
+              <Text style={styles.errorBoxLabel}>{saveError}</Text>
+            </View>
+          ) : null}
+
+          {!signedIn ? (
+            <View style={styles.notice}>
+              <Info size={15} color={colors.pinkDark} />
+              <Text style={styles.noticeLabel}>
+                Δεν είσαι συνδεδεμένη, οπότε οι αλλαγές δεν αποθηκεύονται. Κάνε σύνδεση για να
+                κρατηθεί το προφίλ σου.
+              </Text>
+            </View>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -414,6 +452,21 @@ const styles = StyleSheet.create({
   },
   chipLabelActive: {
     color: colors.pinkDark,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    backgroundColor: '#FBE4E4',
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    marginTop: spacing.xl,
+  },
+  errorBoxLabel: {
+    flex: 1,
+    fontSize: 11.5,
+    fontFamily: font.bold,
+    color: colors.danger,
+    lineHeight: 17,
   },
   notice: {
     flexDirection: 'row',

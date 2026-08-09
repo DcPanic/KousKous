@@ -14,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Eye, EyeOff, Info } from 'lucide-react-native';
 import { colors, fontSizes, radii, spacing, toGreekUpperCase } from '@kouskous/shared';
 import { font } from '@/theme/typography';
+import { greekAuthError } from '@/lib/auth-errors';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -21,12 +23,29 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const canSubmit = email.trim().length > 0 && password.length > 0;
 
-  const submit = () => {
-    if (!canSubmit) return;
-    // Signing in needs Supabase auth; until then this only opens the app.
+  const submit = async () => {
+    if (!canSubmit || submitting) return;
+
+    setSubmitting(true);
+    setFormError(null);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    setSubmitting(false);
+
+    if (error) {
+      setFormError(greekAuthError(error.message));
+      return;
+    }
+
     router.replace('/');
   };
 
@@ -96,23 +115,22 @@ export default function LoginScreen() {
             <Text style={styles.forgotLabel}>Ξέχασα τον κωδικό μου</Text>
           </Pressable>
 
-          <View style={styles.notice}>
-            <Info size={15} color={colors.pinkDark} />
-            <Text style={styles.noticeLabel}>
-              Η σύνδεση δεν ελέγχεται ακόμα — η βάση (Supabase) δεν έχει συνδεθεί. Μέχρι τότε το
-              κουμπί σε βάζει στην εφαρμογή για να τη δεις.
-            </Text>
-          </View>
+          {formError ? (
+            <View style={styles.errorBox}>
+              <Info size={15} color={colors.danger} />
+              <Text style={styles.errorBoxLabel}>{formError}</Text>
+            </View>
+          ) : null}
         </ScrollView>
 
         <View style={styles.footer}>
           <Pressable
-            onPress={submit}
-            disabled={!canSubmit}
+            onPress={() => void submit()}
+            disabled={!canSubmit || submitting}
             style={[styles.submit, !canSubmit && styles.submitDisabled]}
             accessibilityRole="button"
           >
-            <Text style={styles.submitLabel}>Σύνδεση</Text>
+            <Text style={styles.submitLabel}>{submitting ? 'Σύνδεση...' : 'Σύνδεση'}</Text>
           </Pressable>
           <Pressable
             onPress={() => router.replace('/signup')}
@@ -206,6 +224,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: font.bold,
     color: colors.pink,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    backgroundColor: '#FBE4E4',
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    marginTop: spacing.md,
+  },
+  errorBoxLabel: {
+    flex: 1,
+    fontSize: 11.5,
+    fontFamily: font.bold,
+    color: colors.danger,
+    lineHeight: 17,
   },
   notice: {
     flexDirection: 'row',

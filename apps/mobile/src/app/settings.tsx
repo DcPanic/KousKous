@@ -47,7 +47,7 @@ const MONTHLY_PRICE = `€${PAID_MEMBER_PRICE_EUR.toFixed(2).replace('.', ',')}/
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user } = useSession();
+  const { user, signedIn, signOut } = useSession();
   const { blockedNames } = useAppState();
   const tier = accountTier(user);
 
@@ -161,12 +161,16 @@ export default function SettingsScreen() {
 
         <Section label="" />
         <Pressable
-          onPress={() => router.replace('/welcome')}
+          onPress={() => {
+            void signOut().then(() => router.replace('/welcome'));
+          }}
           style={styles.dangerRow}
           accessibilityRole="button"
         >
           <LogOut size={17} color={colors.text} />
-          <Text style={styles.dangerLabel}>Αποσύνδεση</Text>
+          <Text style={styles.dangerLabel}>
+            {signedIn ? 'Αποσύνδεση' : 'Σύνδεση σε λογαριασμό'}
+          </Text>
         </Pressable>
         <Pressable
           onPress={() => setDeleteOpen(true)}
@@ -190,7 +194,7 @@ export default function SettingsScreen() {
         onCancel={() => setDeleteOpen(false)}
         onConfirm={() => {
           setDeleteOpen(false);
-          router.replace('/welcome');
+          void signOut().then(() => router.replace('/welcome'));
         }}
       />
     </SafeAreaView>
