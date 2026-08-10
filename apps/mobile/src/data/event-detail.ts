@@ -29,6 +29,8 @@ export interface EventDetail {
   title: string;
   hostName: string;
   hostVerified: boolean;
+  /** Run by KousKous itself, which makes joining a members' benefit. */
+  isOfficial: boolean;
   /** Location id from the shared locations list. */
   location: string;
   venue: string;
@@ -72,6 +74,7 @@ const DEFAULT_FAQ: EventFaq[] = [
 const events: EventDetail[] = [
   {
     id: 'e1',
+    isOfficial: false,
     title: 'Wine Night στο Κολωνάκι',
     hostName: 'Νατάσα Ιωάννου',
     hostVerified: true,
@@ -101,6 +104,7 @@ const events: EventDetail[] = [
   },
   {
     id: 'e2',
+    isOfficial: false,
     title: 'Πρωινή Yoga στη Βουλιαγμένη',
     hostName: 'Νατάσα Ιωάννου',
     hostVerified: true,
@@ -128,6 +132,7 @@ const events: EventDetail[] = [
   },
   {
     id: 'e3',
+    isOfficial: true,
     title: 'Brunch & Networking',
     hostName: 'Ελένη Βασιλείου',
     hostVerified: false,
@@ -151,6 +156,7 @@ const events: EventDetail[] = [
   },
   {
     id: 'e4',
+    isOfficial: false,
     title: 'Sunset Yoga στη Λεμεσό',
     hostName: 'Μαρίνα Χατζή',
     hostVerified: true,

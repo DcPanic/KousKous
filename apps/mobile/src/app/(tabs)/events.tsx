@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Calendar, Crown, Users } from 'lucide-react-native';
+import { Calendar, Crown, Lock, Users } from 'lucide-react-native';
 import {
-  accessFor,
+  accountTier,
   colors,
   findEventCategory,
   findPlace,
@@ -23,14 +23,16 @@ import { useAppState } from '@/state/app-state';
 import { useSession } from '@/state/session';
 import { DiagonalGradient } from '@/components/gradient';
 import { FilterBar } from '@/components/filter-bar';
-import { LockedOverlay } from '@/components/locked-overlay';
 import { SectionEyebrow } from '@/components/section-eyebrow';
 
 export default function EventsScreen() {
   const { user } = useSession();
   const { selectedPlaces, eventCategoryIds, dateRange, priceBand, availableOnly } = useAppState();
   const router = useRouter();
-  const locked = accessFor(user, 'events_view') === 'preview';
+  // Events are open to everyone. Only the KousKous events themselves are
+  // a members' benefit, and that is marked per card rather than by hiding
+  // the whole screen.
+  const isFree = accountTier(user) === 'free';
 
   const visibleEvents = useMemo(
     () =>
@@ -54,7 +56,6 @@ export default function EventsScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={!locked}
       >
         <SectionEyebrow>Επερχόμενα Events</SectionEyebrow>
         <View style={styles.list}>
@@ -67,9 +68,6 @@ export default function EventsScreen() {
               <Pressable
                 key={event.id}
                 style={styles.card}
-                // Free members only get the blurred preview, so the card
-                // must not open the detail screen for them.
-                disabled={locked}
                 onPress={() => router.push({ pathname: '/event/[id]', params: { id: event.id } })}
                 accessibilityRole="button"
                 accessibilityLabel={event.title}
@@ -85,6 +83,12 @@ export default function EventsScreen() {
                     <View style={styles.officialBadge}>
                       <Crown size={10} color={colors.white} fill={colors.white} />
                       <Text style={styles.categoryLabel}>Official</Text>
+                    </View>
+                  ) : null}
+                  {event.isOfficial && isFree ? (
+                    <View style={styles.membersBadge}>
+                      <Lock size={9} color={colors.white} />
+                      <Text style={styles.categoryLabel}>Για μέλη</Text>
                     </View>
                   ) : null}
                 </DiagonalGradient>
@@ -123,12 +127,6 @@ export default function EventsScreen() {
         </View>
       </ScrollView>
 
-      {locked ? (
-        <LockedOverlay
-          title="Τα events είναι για μέλη"
-          subtitle="Κλείσε θέση σε official & host events."
-        />
-      ) : null}
     </View>
   );
 }
@@ -166,6 +164,18 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
+  },
+  membersBadge: {
+    position: 'absolute',
+    left: spacing.sm,
+    bottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.imageBadge,
+    borderRadius: radii.full,
+    paddingVertical: 3,
+    paddingHorizontal: spacing.sm,
   },
   officialBadge: {
     flexDirection: 'row',

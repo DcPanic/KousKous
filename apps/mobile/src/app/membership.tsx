@@ -52,13 +52,13 @@ const BENEFITS: Benefit[] = [
   },
   {
     icon: CalendarHeart,
-    title: 'Συμμετοχή σε events',
-    body: 'Δηλώνεις συμμετοχή σε ό,τι τρέχει στην περιοχή σου.',
+    title: 'Events του KousKous',
+    body: 'Συμμετοχή στα events που διοργανώνουμε εμείς, σε όλη την Ελλάδα και την Κύπρο.',
   },
   {
     icon: Gift,
-    title: 'Rewards Club',
-    body: 'Πόντοι από κάθε συμμετοχή, δώρα και προσφορές συνεργατών.',
+    title: 'Διαγωνισμοί & δώρα',
+    body: 'Πόντοι από κάθε συμμετοχή, giveaways και προσφορές συνεργατών.',
   },
   {
     icon: ShieldCheck,
@@ -68,7 +68,12 @@ const BENEFITS: Benefit[] = [
 ];
 
 /** What stays free, so the offer is honest about the difference. */
-const FREE_INCLUDES = ['Feed και stories', 'Like, σχόλια, δημοσιεύσεις', 'Προβολή forums και events'];
+const FREE_INCLUDES = [
+  'Feed και stories',
+  'Like, σχόλια, δημοσιεύσεις',
+  'Όλα τα events των διοργανωτριών — και συμμετοχή σε αυτά',
+  'Προβολή των forums',
+];
 
 export default function MembershipScreen() {
   const router = useRouter();
@@ -99,7 +104,7 @@ export default function MembershipScreen() {
           </View>
           <Text style={styles.heroTitle}>Μπες μέσα στην κοινότητα</Text>
           <Text style={styles.heroBody}>
-            Όλα όσα κάνουν το KousKous κοινότητα και όχι απλώς ένα feed.
+            Forums, τα δικά μας events και τα δώρα — όλα όσα κάνουν το KousKous κοινότητα.
           </Text>
           <View style={styles.priceRow}>
             <Text style={styles.price}>{euro(PAID_MEMBER_PRICE_EUR)}</Text>

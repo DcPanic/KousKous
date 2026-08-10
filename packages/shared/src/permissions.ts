@@ -24,7 +24,6 @@ export type Feature =
   | 'forums_participate'
   | 'chat'
   | 'events_view'
-  | 'events_join'
   | 'follow_categories'
   | 'rewards'
   | 'create_events'
@@ -55,15 +54,22 @@ export function accountTier(user: Pick<User, 'is_official' | 'is_host' | 'commun
 const MEMBER_ONLY: Feature[] = [
   'forums_participate',
   'chat',
-  'events_join',
   'follow_categories',
   'rewards',
 ];
 
 /** Free accounts see these surfaces, but blurred behind a lock overlay. */
-const PREVIEW_FOR_FREE: Feature[] = ['forums_view', 'events_view'];
+const PREVIEW_FOR_FREE: Feature[] = ['forums_view'];
 
-const ALWAYS_ALLOWED: Feature[] = ['profile', 'feed', 'engagement', 'stories'];
+const ALWAYS_ALLOWED: Feature[] = [
+  'profile',
+  'feed',
+  'engagement',
+  'stories',
+  // Events are open to everyone: what a subscription buys is the forums,
+  // the KousKous events and the rewards — not the events other women run.
+  'events_view',
+];
 
 export function accessFor(
   user: Pick<User, 'is_official' | 'is_host' | 'community_approved' | 'is_paid_member'>,
@@ -97,6 +103,22 @@ export function can(
   feature: Feature,
 ): boolean {
   return accessFor(user, feature) === 'allowed';
+}
+
+/**
+ * Who may take part in an event.
+ *
+ * Events run by hosts are open to every account, free ones included —
+ * they are the hosts' livelihood and the reason many women arrive. Only
+ * the events KousKous itself runs are a subscription benefit, alongside
+ * the forums and the rewards.
+ */
+export function canJoinEvent(
+  user: Pick<User, 'is_official' | 'is_host' | 'community_approved' | 'is_paid_member'>,
+  event: { is_official: boolean },
+): boolean {
+  if (!event.is_official) return true;
+  return accountTier(user) !== 'free';
 }
 
 /**

@@ -18,7 +18,7 @@ import {
   Users,
 } from 'lucide-react-native';
 import {
-  can,
+  canJoinEvent,
   colors,
   findLocation,
   gradients,
@@ -57,7 +57,9 @@ export default function EventDetailScreen() {
     );
   }
 
-  const canJoin = can(user, 'events_join');
+  // Host events are open to everyone; only the KousKous ones need a
+  // subscription (spec §3, revised).
+  const canJoin = canJoinEvent(user, { is_official: event.isOfficial });
   const isFree = event.price === 0;
   const spotsLeft = event.spotsTotal - event.spotsTaken;
   const cityName = findLocation(event.location)?.name ?? '';
