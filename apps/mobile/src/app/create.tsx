@@ -24,7 +24,7 @@ import {
 import { font } from '@/theme/typography';
 import type { Attachment } from '@/data/forum';
 import { pickMedia } from '@/lib/media';
-import { useAppState } from '@/state/app-state';
+import { useFeed } from '@/state/feed';
 import { useSession } from '@/state/session';
 import { AttachmentGrid } from '@/components/attachments';
 import { Avatar } from '@/components/avatar';
@@ -36,14 +36,16 @@ const POSTABLE_PLACES = places.filter(
 
 export default function CreatePostScreen() {
   const router = useRouter();
-  const { user } = useSession();
-  const { addPost } = useAppState();
+  const { user, signedIn } = useSession();
+  const { publish } = useFeed();
 
   const [caption, setCaption] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [placeId, setPlaceId] = useState<string>(user.location ?? 'athens');
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [placePickerOpen, setPlacePickerOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
 
   const attach = async (kind: 'image' | 'video') => {
     const picked = await pickMedia(kind);
@@ -52,35 +54,36 @@ export default function CreatePostScreen() {
 
   const canPublish = caption.trim().length > 0 || attachments.length > 0;
 
-  const publish = () => {
-    if (!canPublish) return;
+  const submit = async () => {
+    if (!canPublish || publishing) return;
 
-    const place = findPlace(placeId);
     // Hashtags are written inline; they are pulled out so the card can
     // colour them the way the design does.
     const words = caption.trim().split(/\s+/);
     const hashtags = words.filter((word) => word.startsWith('#'));
     const body = words.filter((word) => !word.startsWith('#')).join(' ');
 
-    addPost({
-      id: `local-${Date.now()}`,
-      author: user.name,
-      verified: user.is_verified,
-      location: placeId,
-      locationLabel: place ? `${place.name}, ${place.country === 'CY' ? 'Κύπρος' : 'Ελλάδα'}` : '',
-      timeAgo: 'μόλις τώρα',
+    setPublishing(true);
+    setPublishError(null);
+
+    const ok = await publish({
       caption: body,
       hashtags: hashtags.join(' '),
-      mediaCount: attachments.length,
-      likes: 0,
-      comments: 0,
-      shares: 0,
-      likedByLabel: '',
-      commentPreviews: [],
-      totalComments: 0,
+      location: placeId,
       categoryId,
       attachments,
     });
+
+    setPublishing(false);
+
+    if (!ok) {
+      setPublishError(
+        signedIn
+          ? 'Η δημοσίευση δεν στάλθηκε. Έλεγξε τη σύνδεσή σου και δοκίμασε ξανά.'
+          : 'Κάνε σύνδεση για να δημοσιεύσεις.',
+      );
+      return;
+    }
 
     router.back();
   };
@@ -98,12 +101,14 @@ export default function CreatePostScreen() {
         </Pressable>
         <Text style={styles.headerTitle}>Νέα δημοσίευση</Text>
         <Pressable
-          onPress={publish}
-          disabled={!canPublish}
+          onPress={() => void submit()}
+          disabled={!canPublish || publishing}
           style={[styles.publish, !canPublish && styles.publishDisabled]}
           accessibilityRole="button"
         >
-          <Text style={styles.publishLabel}>Δημοσίευση</Text>
+          <Text style={styles.publishLabel}>
+            {publishing ? 'Αποστολή...' : 'Δημοσίευση'}
+          </Text>
         </Pressable>
       </View>
 
@@ -126,6 +131,17 @@ export default function CreatePostScreen() {
             multiline
             autoFocus
           />
+
+          {publishError ? (
+            <View style={styles.publishErrorRow}>
+              <Text style={styles.publishError}>{publishError}</Text>
+              {!signedIn ? (
+                <Pressable onPress={() => router.push('/login')} accessibilityRole="button">
+                  <Text style={styles.publishErrorAction}>Σύνδεση</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
 
           <AttachmentGrid
             attachments={attachments}
@@ -284,6 +300,23 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     minHeight: 110,
     textAlignVertical: 'top',
+  },
+  publishErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  publishError: {
+    flex: 1,
+    fontSize: 11.5,
+    fontFamily: font.bold,
+    color: colors.danger,
+  },
+  publishErrorAction: {
+    fontSize: 11.5,
+    fontFamily: font.extrabold,
+    color: colors.pink,
   },
   sectionTitle: {
     fontSize: 11,

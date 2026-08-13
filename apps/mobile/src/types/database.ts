@@ -86,6 +86,64 @@ export type EventRow = {
   created_at: string;
 }
 
+export type PostMediaRow = {
+  id: string;
+  post_id: string;
+  kind: 'image' | 'video';
+  storage_path: string;
+  position: number;
+};
+
+/** Join tables: a composite primary key, no surrogate id. */
+export type PostLikeRow = {
+  post_id: string;
+  profile_id: string;
+  created_at: string;
+};
+
+export type PostSaveRow = {
+  post_id: string;
+  profile_id: string;
+  created_at: string;
+};
+
+export type ThreadSaveRow = {
+  thread_id: string;
+  profile_id: string;
+  created_at: string;
+};
+
+export type CategoryFollowRow = {
+  profile_id: string;
+  category_id: string;
+  created_at: string;
+};
+
+export type BlockRow = {
+  blocker_id: string;
+  blocked_id: string;
+  created_at: string;
+};
+
+export type EventAttendeeRow = {
+  event_id: string;
+  profile_id: string;
+  checked_in_at: string | null;
+  created_at: string;
+};
+
+export type ReportRow = {
+  id: string;
+  reporter_id: string;
+  reason: string;
+  post_id: string | null;
+  thread_id: string | null;
+  reply_id: string | null;
+  reported_profile_id: string | null;
+  status: string;
+  created_at: string;
+};
+
 export type MessageRow = {
   id: string;
   conversation_id: string;
@@ -127,6 +185,14 @@ export interface Database {
       events: Table<EventRow, 'id' | 'created_at' | 'description' | 'is_official'>;
       messages: Table<MessageRow, 'id' | 'created_at' | 'body'>;
       rewards: Table<RewardRow, 'id' | 'created_at'>;
+      post_media: Table<PostMediaRow, 'id' | 'position'>;
+      post_likes: Table<PostLikeRow, 'created_at'>;
+      post_saves: Table<PostSaveRow, 'created_at'>;
+      thread_saves: Table<ThreadSaveRow, 'created_at'>;
+      category_follows: Table<CategoryFollowRow, 'created_at'>;
+      blocks: Table<BlockRow, 'created_at'>;
+      event_attendees: Table<EventAttendeeRow, 'created_at' | 'checked_in_at'>;
+      reports: Table<ReportRow, 'id' | 'created_at' | 'status'>;
     };
     // The canonical "empty" form used by Supabase's own generated types.
     // Record<string, never> is not assignable to the library's generic

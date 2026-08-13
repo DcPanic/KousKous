@@ -15,6 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet, View } from 'react-native';
 import { colors } from '@kouskous/shared';
 import { AppStateProvider } from '@/state/app-state';
+import { FeedProvider } from '@/state/feed';
 import { SessionProvider } from '@/state/session';
 import { DrawerMenu } from '@/components/drawer-menu';
 
@@ -44,6 +45,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SessionProvider>
         <AppStateProvider>
+          <FeedProvider>
           <View style={styles.root}>
             <StatusBar style="dark" />
             <Stack
@@ -58,6 +60,7 @@ export default function RootLayout() {
             {/* Sits above the navigator so it can cover the tab bar. */}
             <DrawerMenu />
           </View>
+          </FeedProvider>
         </AppStateProvider>
       </SessionProvider>
     </SafeAreaProvider>

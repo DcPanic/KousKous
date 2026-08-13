@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   KeyboardAvoidingView,
@@ -14,9 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Heart, SendHorizontal } from 'lucide-react-native';
 import { can, colors, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { posts } from '@/data/mock';
 import { findPersonByName } from '@/data/people';
-import { useAppState } from '@/state/app-state';
+import { useFeed } from '@/state/feed';
 import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
 import { PostCard } from '@/components/post-card';
@@ -32,13 +31,20 @@ export default function PostScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useSession();
-  const { createdPosts, commentsFor, addComment } = useAppState();
+  const { posts, commentsFor, loadComments, addComment } = useFeed();
 
   const [draft, setDraft] = useState('');
   const [likedComments, setLikedComments] = useState<string[]>([]);
+  const [sending, setSending] = useState(false);
 
   const postId = typeof id === 'string' ? id : '';
-  const post = createdPosts.find((item) => item.id === postId) ?? posts.find((item) => item.id === postId);
+  const post = posts.find((item) => item.id === postId);
+
+  // Comments are fetched on open rather than with the feed, which would
+  // pull every comment of every post into the list query.
+  useEffect(() => {
+    if (postId) void loadComments(postId);
+  }, [postId, loadComments]);
 
   if (!post) {
     return (
@@ -53,10 +59,14 @@ export default function PostScreen() {
   const canComment = can(user, 'engagement');
   const comments = [...post.commentPreviews, ...commentsFor(post.id)];
 
-  const submit = () => {
-    if (draft.trim().length === 0) return;
-    addComment(post.id, { author: user.name, text: draft.trim() });
-    setDraft('');
+  const submit = async () => {
+    if (draft.trim().length === 0 || sending) return;
+
+    setSending(true);
+    const ok = await addComment(post.id, draft.trim());
+    setSending(false);
+
+    if (ok) setDraft('');
   };
 
   return (
@@ -147,7 +157,8 @@ export default function PostScreen() {
               multiline
             />
             <Pressable
-              onPress={submit}
+              onPress={() => void submit()}
+              disabled={sending}
               style={styles.send}
               accessibilityRole="button"
               accessibilityLabel="Αποστολή σχολίου"

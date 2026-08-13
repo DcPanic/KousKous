@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, layout, matchesPlaces, spacing } from '@kouskous/shared';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { colors, layout, matchesPlaces, radii, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { posts } from '@/data/mock';
+
 import { useAppState } from '@/state/app-state';
+import { useFeed } from '@/state/feed';
 import { FilterBar } from '@/components/filter-bar';
 import { FeedTabs, type FeedTab } from '@/components/feed-tabs';
 import { PostCard } from '@/components/post-card';
@@ -12,12 +13,13 @@ import { StoryRow } from '@/components/story-row';
 
 export default function FeedScreen() {
   const [tab, setTab] = useState<FeedTab>('foryou');
-  const { selectedPlaces, createdPosts, followedCategories, blockedNames } = useAppState();
+  const { selectedPlaces, followedCategories, blockedNames } = useAppState();
+  const { posts, loading, error, refresh } = useFeed();
 
   const visiblePosts = useMemo(() => {
     // Blocking a woman means not seeing her, so it runs before anything
     // else and applies on every tab.
-    const inPlace = [...createdPosts, ...posts].filter(
+    const inPlace = posts.filter(
       (post) =>
         !blockedNames.includes(post.author) && matchesPlaces(post.location, selectedPlaces),
     );
@@ -33,13 +35,33 @@ export default function FeedScreen() {
       return [...inPlace].sort((a, b) => b.likes - a.likes);
     }
     return inPlace;
-  }, [blockedNames, createdPosts, followedCategories, selectedPlaces, tab]);
+  }, [blockedNames, posts, followedCategories, selectedPlaces, tab]);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={loading}
+          onRefresh={() => void refresh()}
+          tintColor={colors.pink}
+        />
+      }
+    >
       <FilterBar surface="feed" resultCount={visiblePosts.length} />
       <StoryRow />
       <FeedTabs value={tab} onChange={setTab} />
+
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorLabel}>Δεν φόρτωσαν οι δημοσιεύσεις.</Text>
+          <Pressable onPress={() => void refresh()} accessibilityRole="button">
+            <Text style={styles.retryLabel}>Δοκίμασε ξανά</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {visiblePosts.length > 0 ? (
         visiblePosts.map((post) => <PostCard key={post.id} post={post} />)
@@ -68,6 +90,28 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingBottom: layout.tabBarHeight,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    backgroundColor: colors.pinkSoft,
+    borderRadius: radii.lg,
+    marginHorizontal: spacing.screen,
+    marginTop: spacing.md,
+    padding: spacing.md,
+  },
+  errorLabel: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: font.medium,
+    color: colors.pinkDark,
+  },
+  retryLabel: {
+    fontSize: 12,
+    fontFamily: font.extrabold,
+    color: colors.pink,
   },
   empty: {
     paddingHorizontal: spacing.xxl,

@@ -6,8 +6,9 @@ import { ArrowLeft, Bookmark, Heart, MessageCircle } from 'lucide-react-native';
 import { colors, findCategory, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { findThread, type ForumThread } from '@/data/forum';
-import { posts, type MockPost } from '@/data/mock';
+import type { MockPost } from '@/data/mock';
 import { useAppState } from '@/state/app-state';
+import { useFeed } from '@/state/feed';
 import { PostCard } from '@/components/post-card';
 
 /**
@@ -20,10 +21,10 @@ export default function SavedScreen() {
     savedThreadIds,
     savedPostIds,
     createdThreads,
-    createdPosts,
     toggleSaved,
     repliesFor,
   } = useAppState();
+  const { posts } = useFeed();
 
   const [tab, setTab] = useState<'threads' | 'posts'>('threads');
 
@@ -35,10 +36,7 @@ export default function SavedScreen() {
     .filter((thread): thread is ForumThread => thread !== undefined);
 
   const savedPosts = savedPostIds
-    .map(
-      (id) =>
-        createdPosts.find((post) => post.id === id) ?? posts.find((post) => post.id === id),
-    )
+    .map((id) => posts.find((post) => post.id === id))
     .filter((post): post is MockPost => post !== undefined);
 
   return (

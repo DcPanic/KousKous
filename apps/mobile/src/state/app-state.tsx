@@ -12,8 +12,9 @@ import { emptyDateRange, hasDateRange, type DateRange, type PriceBand } from '@k
 import type { ForumReply, ForumThread } from '@/data/forum';
 import { conversations, type ChatMessage } from '@/data/chat';
 import { notifications } from '@/data/notifications';
-import type { MockComment, MockPost } from '@/data/mock';
+import { fetchMyReactions, setLike, setSaved } from '@/lib/posts-repo';
 import { usePersistedStringList } from '@/lib/use-persisted-list';
+import { useSession } from '@/state/session';
 
 /** Which screen's filters are being counted or cleared. */
 export type FilterSurface = 'feed' | 'forum' | 'events';
@@ -86,13 +87,6 @@ interface AppStateValue {
   createdThreads: ForumThread[];
   addThread: (thread: ForumThread) => void;
 
-  /** Posts written in this session, newest first. */
-  createdPosts: MockPost[];
-  addPost: (post: MockPost) => void;
-
-  commentsFor: (postId: string) => MockComment[];
-  addComment: (postId: string, comment: MockComment) => void;
-
   repliesFor: (threadId: string) => ForumReply[];
   addReply: (threadId: string, reply: ForumReply) => void;
 
@@ -115,6 +109,7 @@ interface AppStateValue {
 const AppStateContext = createContext<AppStateValue | null>(null);
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
+  const { user, signedIn } = useSession();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedPlaces, setSelectedPlaces] = useState<string[]>([]);
   const [eventCategoryIds, setEventCategoryIds] = useState<string[]>([]);
@@ -136,9 +131,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [readNotificationIds, setReadNotificationIds] = usePersistedStringList('readNotifications');
   const [readConversationIds, setReadConversationIds] = usePersistedStringList('readConversations');
   const [createdThreads, setCreatedThreads] = useState<ForumThread[]>([]);
-  const [createdPosts, setCreatedPosts] = useState<MockPost[]>([]);
   const [replies, setReplies] = useState<Record<string, ForumReply[]>>({});
-  const [comments, setComments] = useState<Record<string, MockComment[]>>({});
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
 
   const openDrawer = useCallback(() => setDrawerOpen(true), []);
@@ -205,17 +198,50 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setReportedPostIds((prev) => (prev.includes(postId) ? prev : [postId, ...prev]));
   }, []);
 
-  const toggleLike = useCallback((postId: string) => {
-    setLikedPostIds((prev) =>
-      prev.includes(postId) ? prev.filter((item) => item !== postId) : [postId, ...prev],
-    );
-  }, []);
+  // The list updates immediately and the write follows; a failed write
+  // is corrected by the next hydration rather than by blocking the tap.
+  const toggleLike = useCallback(
+    (postId: string) => {
+      const liked = !likedPostIds.includes(postId);
+      setLikedPostIds((prev) =>
+        liked ? [postId, ...prev] : prev.filter((item) => item !== postId),
+      );
+      if (signedIn) void setLike(postId, user.id, liked).catch(() => undefined);
+    },
+    [likedPostIds, setLikedPostIds, signedIn, user.id],
+  );
 
-  const toggleSavedPost = useCallback((postId: string) => {
-    setSavedPostIds((prev) =>
-      prev.includes(postId) ? prev.filter((item) => item !== postId) : [postId, ...prev],
-    );
-  }, []);
+  const toggleSavedPost = useCallback(
+    (postId: string) => {
+      const saved = !savedPostIds.includes(postId);
+      setSavedPostIds((prev) =>
+        saved ? [postId, ...prev] : prev.filter((item) => item !== postId),
+      );
+      if (signedIn) void setSaved(postId, user.id, saved).catch(() => undefined);
+    },
+    [savedPostIds, setSavedPostIds, signedIn, user.id],
+  );
+
+  // Her real likes and saves replace the locally cached ones on sign-in.
+  useEffect(() => {
+    if (!signedIn) return;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const reactions = await fetchMyReactions(user.id);
+        if (cancelled) return;
+        setLikedPostIds(reactions.liked);
+        setSavedPostIds(reactions.saved);
+      } catch {
+        // Keep the cached lists; they are a reasonable approximation.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [signedIn, user.id, setLikedPostIds, setSavedPostIds]);
 
   const toggleSaved = useCallback((threadId: string) => {
     setSavedThreadIds((prev) =>
@@ -225,14 +251,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const addThread = useCallback((thread: ForumThread) => {
     setCreatedThreads((prev) => [thread, ...prev]);
-  }, []);
-
-  const addPost = useCallback((post: MockPost) => {
-    setCreatedPosts((prev) => [post, ...prev]);
-  }, []);
-
-  const addComment = useCallback((postId: string, comment: MockComment) => {
-    setComments((prev) => ({ ...prev, [postId]: [...(prev[postId] ?? []), comment] }));
   }, []);
 
   const addReply = useCallback((threadId: string, reply: ForumReply) => {
@@ -305,10 +323,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toggleSaved,
       createdThreads,
       addThread,
-      createdPosts,
-      addPost,
-      commentsFor: (postId: string) => comments[postId] ?? [],
-      addComment,
       repliesFor: (threadId: string) => replies[threadId] ?? [],
       addReply,
       sentMessages: (conversationId: string) => messages[conversationId] ?? [],
@@ -350,10 +364,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toggleSaved,
       createdThreads,
       addThread,
-      createdPosts,
-      addPost,
-      comments,
-      addComment,
       replies,
       addReply,
       messages,
