@@ -9,6 +9,7 @@
  * here only drives the countdown label.
  */
 
+import { signedMediaUrls, toUploadable } from '@/lib/storage-media';
 import { supabase } from '@/lib/supabase';
 import type { MockStory, StoryFrame } from '@/data/mock';
 
@@ -22,11 +23,6 @@ interface StoryRow {
   caption: string;
   created_at: string;
   author: { name: string; avatar_url: string | null } | null;
-}
-
-function mediaUrl(storagePath: string): string {
-  const { data } = supabase.storage.from('media').getPublicUrl(storagePath);
-  return data.publicUrl;
 }
 
 /** "3 ώρες ακόμα" — what is left of the window, not how old it is. */
@@ -50,15 +46,18 @@ export async function fetchStories(): Promise<MockStory[]> {
 
   if (error || !data) throw error ?? new Error('stories unavailable');
 
+  const rows = data as unknown as StoryRow[];
+  const urls = await signedMediaUrls(rows.map((row) => row.storage_path));
+
   // Group by author, keeping the order the frames were posted in.
   const byAuthor = new Map<string, MockStory>();
 
-  for (const row of data as unknown as StoryRow[]) {
+  for (const row of rows) {
     const frame: StoryFrame = {
       id: row.id,
       tint: '#FBE1E9',
       caption: row.caption,
-      uri: mediaUrl(row.storage_path),
+      uri: urls.get(row.storage_path),
       kind: row.kind,
     };
 
@@ -92,12 +91,11 @@ export interface NewStory {
 
 export async function createStory(authorId: string, input: NewStory): Promise<void> {
   const path = `${authorId}/stories/${Date.now()}`;
-  const response = await fetch(input.uri);
-  const blob = await response.blob();
+  const blob = await toUploadable(input.uri);
 
   const { error: uploadError } = await supabase.storage
     .from('media')
-    .upload(path, blob, { contentType: blob.type, upsert: true });
+    .upload(path, blob, { contentType: blob.type || undefined, upsert: true });
 
   if (uploadError) throw uploadError;
 

@@ -23,6 +23,7 @@ import {
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { pickMedia } from '@/lib/media';
+import { avatarUrl, toUploadable } from '@/lib/storage-media';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
@@ -76,13 +77,38 @@ export default function EditProfileScreen() {
     setSaving(true);
     setSaveError(null);
 
+    // A freshly picked photo is a local file. Storing that path would
+    // leave the avatar broken everywhere except the phone it came from,
+    // so it is uploaded first and the public URL is what gets saved.
+    let savedAvatar = avatarUri ?? null;
+
+    if (avatarUri && !avatarUri.startsWith('http')) {
+      try {
+        const path = `${user.id}/avatar`;
+        const blob = await toUploadable(avatarUri);
+
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(path, blob, { contentType: blob.type || undefined, upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        // Cache-busted, otherwise a replaced photo keeps showing the old one.
+        savedAvatar = `${avatarUrl(path)}?v=${Date.now()}`;
+      } catch {
+        setSaving(false);
+        setSaveError('Η φωτογραφία δεν ανέβηκε. Δοκίμασε ξανά.');
+        return;
+      }
+    }
+
     const { error } = await supabase
       .from('profiles')
       .update({
         name: name.trim(),
         bio: bio.trim() || null,
         location: placeId,
-        avatar_url: avatarUri ?? null,
+        avatar_url: savedAvatar,
       })
       .eq('id', user.id);
 

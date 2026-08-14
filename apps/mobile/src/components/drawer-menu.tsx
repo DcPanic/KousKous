@@ -101,7 +101,7 @@ export function DrawerMenu() {
       <Animated.View style={[styles.panel, { width, transform: [{ translateX }] }]}>
         <View style={[styles.header, { paddingTop: insets.top + spacing.screen }]}>
           <View style={styles.headerUser}>
-            <Avatar size={46} />
+            <Avatar size={46} uri={user.avatar_url ?? undefined} />
             <View style={styles.headerText}>
               <Text style={styles.headerName} numberOfLines={1}>
                 {user.name}

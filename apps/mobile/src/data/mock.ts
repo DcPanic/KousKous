@@ -39,6 +39,7 @@ export interface MockPost {
   id: string;
   /** Set on database rows; absent on seeded content. */
   authorId?: string;
+  authorAvatarUrl?: string | null;
   author: string;
   verified: boolean;
   location: string;

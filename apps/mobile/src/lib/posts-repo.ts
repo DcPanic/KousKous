@@ -10,6 +10,7 @@ import { findPlace } from '@kouskous/shared';
 import type { Attachment } from '@/data/forum';
 import type { MockComment, MockPost } from '@/data/mock';
 import { relativeTime } from '@/lib/relative-time';
+import { signedMediaUrls, toUploadable } from '@/lib/storage-media';
 import { supabase } from '@/lib/supabase';
 
 /** What the feed query selects, joins included. */
@@ -48,30 +49,25 @@ interface FeedRow {
   comments: { count: number }[] | null;
 }
 
-/** Signed URLs are per-request; the bucket path is enough to build one. */
-export function mediaUrl(storagePath: string): string {
-  const { data } = supabase.storage.from('media').getPublicUrl(storagePath);
-  return data.publicUrl;
-}
-
-function toAttachment(media: JoinedMedia): Attachment {
-  return { id: media.id, kind: media.kind, uri: mediaUrl(media.storage_path) };
+function toAttachment(media: JoinedMedia, urls: Map<string, string>): Attachment {
+  return { id: media.id, kind: media.kind, uri: urls.get(media.storage_path) };
 }
 
 function countOf(rows: { count: number }[] | null): number {
   return rows?.[0]?.count ?? 0;
 }
 
-function toPost(row: FeedRow): MockPost {
+function toPost(row: FeedRow, urls: Map<string, string>): MockPost {
   const place = row.location ? findPlace(row.location) : undefined;
   const attachments = (row.media ?? [])
     .slice()
     .sort((a, b) => a.position - b.position)
-    .map(toAttachment);
+    .map((media) => toAttachment(media, urls));
 
   return {
     id: row.id,
     authorId: row.author_id,
+    authorAvatarUrl: row.author?.avatar_url ?? null,
     author: row.author?.name ?? 'Μέλος',
     verified: row.author?.is_verified ?? false,
     location: row.location ?? '',
@@ -101,7 +97,13 @@ export async function fetchPosts(): Promise<MockPost[]> {
     .limit(50);
 
   if (error || !data) throw error ?? new Error('feed unavailable');
-  return (data as unknown as FeedRow[]).map(toPost);
+
+  const rows = data as unknown as FeedRow[];
+  const urls = await signedMediaUrls(
+    rows.flatMap((row) => (row.media ?? []).map((media) => media.storage_path)),
+  );
+
+  return rows.map((row) => toPost(row, urls));
 }
 
 export interface NewPost {
@@ -138,12 +140,11 @@ export async function createPost(authorId: string, input: NewPost): Promise<stri
 
   for (const [index, attachment] of uploads.entries()) {
     const path = `${authorId}/${postId}/${index}`;
-    const response = await fetch(attachment.uri as string);
-    const blob = await response.blob();
+    const blob = await toUploadable(attachment.uri as string);
 
     const { error: uploadError } = await supabase.storage
       .from('media')
-      .upload(path, blob, { contentType: blob.type, upsert: true });
+      .upload(path, blob, { contentType: blob.type || undefined, upsert: true });
 
     // One failed photo should not throw away the whole post.
     if (uploadError) continue;

@@ -54,6 +54,7 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <Avatar
           size={isOfficial ? 82 : 74}
+          uri={user.avatar_url ?? undefined}
           initial={isOfficial ? 'K' : undefined}
           ringColor={isOfficial ? colors.gold : undefined}
           gradient={isOfficial ? gradients.officialCover : undefined}

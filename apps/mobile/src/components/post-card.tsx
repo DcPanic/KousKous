@@ -61,7 +61,7 @@ export function PostCard({ post, openable = true }: PostCardProps) {
           accessibilityRole={person ? 'button' : undefined}
           accessibilityLabel={person ? `Προφίλ: ${post.author}` : undefined}
         >
-          <Avatar size={42} />
+          <Avatar size={42} uri={post.authorAvatarUrl ?? undefined} />
           <View style={styles.headerText}>
             <View style={styles.nameRow}>
               <Text style={styles.name}>{post.author}</Text>
