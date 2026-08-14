@@ -52,7 +52,13 @@ export function PostGrid({ posts, emptyLabel }: { posts: MockPost[]; emptyLabel:
             accessibilityLabel={post.caption.slice(0, 60) || 'Δημοσίευση'}
           >
             {cover ? (
-              <Image source={{ uri: cover.uri }} style={styles.image} contentFit="cover" />
+              <Image
+                source={{ uri: cover.uri }}
+                style={styles.image}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={160}
+              />
             ) : (
               <View style={[styles.textTile, { backgroundColor: tintFor(post.id) }]}>
                 <Text style={styles.textTileLabel} numberOfLines={4}>

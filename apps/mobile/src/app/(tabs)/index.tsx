@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { colors, layout, matchesPlaces, radii, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 
@@ -14,7 +14,7 @@ import { StoryRow } from '@/components/story-row';
 export default function FeedScreen() {
   const [tab, setTab] = useState<FeedTab>('foryou');
   const { selectedPlaces, followedCategories, blockedNames } = useAppState();
-  const { posts, loading, error, refresh } = useFeed();
+  const { posts, loading, error, refresh, loadMore } = useFeed();
 
   const visiblePosts = useMemo(() => {
     // Blocking a woman means not seeing her, so it runs before anything
@@ -37,19 +37,11 @@ export default function FeedScreen() {
     return inPlace;
   }, [blockedNames, posts, followedCategories, selectedPlaces, tab]);
 
-  return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={loading}
-          onRefresh={() => void refresh()}
-          tintColor={colors.pink}
-        />
-      }
-    >
+  // A FlatList only builds the rows on screen. The previous ScrollView
+  // laid out every post at once, which is what made a long feed slow to
+  // open on a phone.
+  const header = (
+    <>
       <FilterBar surface="feed" resultCount={visiblePosts.length} />
       <StoryRow />
       <FeedTabs value={tab} onChange={setTab} />
@@ -62,13 +54,24 @@ export default function FeedScreen() {
           </Pressable>
         </View>
       ) : null}
+    </>
+  );
 
-      {visiblePosts.length > 0 ? (
-        visiblePosts.map((post) => <PostCard key={post.id} post={post} />)
-      ) : (
+  return (
+    <FlatList
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      data={visiblePosts}
+      keyExtractor={(post) => post.id}
+      renderItem={({ item }) => <PostCard post={item} />}
+      ListHeaderComponent={header}
+      ListFooterComponent={<PromoBanners />}
+      ListEmptyComponent={
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>
-            {tab === 'following' ? 'Καμία δημοσίευση από τις κοινότητές σου' : 'Δεν βρέθηκαν δημοσιεύσεις'}
+            {tab === 'following'
+              ? 'Καμία δημοσίευση από τις κοινότητές σου'
+              : 'Δεν βρέθηκαν δημοσιεύσεις'}
           </Text>
           <Text style={styles.emptyBody}>
             {tab === 'following'
@@ -76,10 +79,24 @@ export default function FeedScreen() {
               : 'Δοκίμασε να αλλάξεις ή να καθαρίσεις το φίλτρο τοποθεσίας.'}
           </Text>
         </View>
-      )}
-
-      <PromoBanners />
-    </ScrollView>
+      }
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={loading}
+          onRefresh={() => void refresh()}
+          tintColor={colors.pink}
+        />
+      }
+      // Keep a small window around the viewport: a card carries photos,
+      // so holding many of them alive costs memory for nothing.
+      initialNumToRender={4}
+      maxToRenderPerBatch={4}
+      windowSize={7}
+      removeClippedSubviews
+      onEndReachedThreshold={0.6}
+      onEndReached={() => void loadMore()}
+    />
   );
 }
 

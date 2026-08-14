@@ -12,7 +12,6 @@ import {
 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
-  can,
   colors,
   findCategory,
   findPlace,
@@ -53,17 +52,12 @@ export default function PersonScreen() {
 
   const tileSize = (width - GRID_GAP * (GRID_COLUMNS + 1)) / GRID_COLUMNS;
   const place = findPlace(person.location);
-  const canMessage = can(user, 'chat');
 
   // Reuse an existing conversation when there is one, so the thread is not
   // duplicated; otherwise the message button goes to the inbox.
   const conversation = conversations.find((item) => item.name === person.name);
 
   const message = () => {
-    if (!canMessage) {
-      router.push('/membership');
-      return;
-    }
     if (conversation) {
       router.push({ pathname: '/chat/[id]', params: { id: conversation.id } });
     } else {

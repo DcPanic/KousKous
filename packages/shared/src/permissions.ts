@@ -51,12 +51,7 @@ export function accountTier(user: Pick<User, 'is_official' | 'is_host' | 'commun
   return 'free';
 }
 
-const MEMBER_ONLY: Feature[] = [
-  'forums_participate',
-  'chat',
-  'follow_categories',
-  'rewards',
-];
+const MEMBER_ONLY: Feature[] = ['forums_participate', 'follow_categories', 'rewards'];
 
 /** Free accounts see these surfaces, but blurred behind a lock overlay. */
 const PREVIEW_FOR_FREE: Feature[] = ['forums_view'];
@@ -69,6 +64,9 @@ const ALWAYS_ALLOWED: Feature[] = [
   // Events are open to everyone: what a subscription buys is the forums,
   // the KousKous events and the rewards — not the events other women run.
   'events_view',
+  // Messaging is how women who met at an event stay in touch. Charging
+  // for it would cut the community at exactly the point it forms.
+  'chat',
 ];
 
 export function accessFor(

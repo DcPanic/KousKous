@@ -13,6 +13,7 @@ import {
   createPost,
   fetchComments,
   fetchPosts,
+  PAGE_SIZE,
   type NewPost,
 } from '@/lib/posts-repo';
 import { useSession } from '@/state/session';
@@ -29,9 +30,13 @@ import { useSession } from '@/state/session';
 interface FeedValue {
   posts: MockPost[];
   loading: boolean;
+  /** True while an older page is being appended. */
+  loadingMore: boolean;
   /** Set when a load failed, so the screen can say so and offer a retry. */
   error: boolean;
   refresh: () => Promise<void>;
+  /** Appends the next page; a no-op once everything is loaded. */
+  loadMore: () => Promise<void>;
 
   /** Returns false when the post could not be saved. */
   publish: (input: NewPost) => Promise<boolean>;
@@ -48,6 +53,8 @@ export function FeedProvider({ children }: { children: ReactNode }) {
 
   const [remotePosts, setRemotePosts] = useState<MockPost[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [exhausted, setExhausted] = useState(false);
   const [error, setError] = useState(false);
   const [comments, setComments] = useState<Record<string, MockComment[]>>({});
 
@@ -58,13 +65,37 @@ export function FeedProvider({ children }: { children: ReactNode }) {
     setError(false);
 
     try {
-      setRemotePosts(await fetchPosts());
+      const page = await fetchPosts();
+      setRemotePosts(page);
+      setExhausted(page.length < PAGE_SIZE);
     } catch {
       setError(true);
     } finally {
       setLoading(false);
     }
   }, [signedIn]);
+
+  // Older posts are fetched by the timestamp of the last one on screen
+  // rather than by offset, so a post added while scrolling cannot make a
+  // row appear twice or be skipped.
+  const loadMore = useCallback(async () => {
+    if (!signedIn || loadingMore || exhausted || !remotePosts?.length) return;
+
+    setLoadingMore(true);
+
+    try {
+      const oldest = remotePosts[remotePosts.length - 1];
+      const page = await fetchPosts(oldest.createdAt);
+
+      setRemotePosts((prev) => [...(prev ?? []), ...page]);
+      setExhausted(page.length < PAGE_SIZE);
+    } catch {
+      // Silent: the feed already has content, and a failed page is
+      // retried by the next scroll.
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [signedIn, loadingMore, exhausted, remotePosts]);
 
   useEffect(() => {
     if (!ready) return;
@@ -76,6 +107,7 @@ export function FeedProvider({ children }: { children: ReactNode }) {
       // account that just signed out.
       setRemotePosts(null);
       setComments({});
+      setExhausted(false);
     }
   }, [ready, signedIn, refresh]);
 
@@ -135,14 +167,27 @@ export function FeedProvider({ children }: { children: ReactNode }) {
     () => ({
       posts: remotePosts ?? seededPosts,
       loading,
+      loadingMore,
       error,
       refresh,
+      loadMore,
       publish,
       commentsFor: (postId: string) => comments[postId] ?? [],
       loadComments,
       addComment,
     }),
-    [remotePosts, loading, error, refresh, publish, comments, loadComments, addComment],
+    [
+      remotePosts,
+      loading,
+      loadingMore,
+      error,
+      refresh,
+      loadMore,
+      publish,
+      comments,
+      loadComments,
+      addComment,
+    ],
   );
 
   return <FeedContext.Provider value={value}>{children}</FeedContext.Provider>;

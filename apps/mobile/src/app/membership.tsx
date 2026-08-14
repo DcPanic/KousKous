@@ -5,7 +5,6 @@ import {
   CalendarHeart,
   Check,
   Gift,
-  MessageSquareText,
   ShieldCheck,
   Sparkles,
   Users,
@@ -46,11 +45,6 @@ const BENEFITS: Benefit[] = [
     body: '14 κοινότητες — γράφεις, απαντάς, ρωτάς ό,τι θες.',
   },
   {
-    icon: MessageSquareText,
-    title: 'Προσωπικά μηνύματα',
-    body: 'Μίλα με γυναίκες που γνώρισες σε events και συζητήσεις.',
-  },
-  {
     icon: CalendarHeart,
     title: 'Events του KousKous',
     body: 'Συμμετοχή στα events που διοργανώνουμε εμείς, σε όλη την Ελλάδα και την Κύπρο.',
@@ -69,8 +63,8 @@ const BENEFITS: Benefit[] = [
 
 /** What stays free, so the offer is honest about the difference. */
 const FREE_INCLUDES = [
-  'Feed και stories',
-  'Like, σχόλια, δημοσιεύσεις',
+  'Feed, stories και δημοσιεύσεις',
+  'Προσωπικά μηνύματα με όλες',
   'Όλα τα events των διοργανωτριών — και συμμετοχή σε αυτά',
   'Προβολή των forums',
 ];

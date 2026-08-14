@@ -58,6 +58,8 @@ export interface MockPost {
   categoryId: string | null;
   /** Narrows the category, e.g. Beauty · Μαλλιά. */
   subcategoryId?: string | null;
+  /** Timestamp of the row, used to page through older posts. */
+  createdAt?: string;
   /** Present on posts written in the app; seeded posts use mediaCount. */
   attachments?: Attachment[];
 }

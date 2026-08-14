@@ -1,19 +1,16 @@
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, BadgeCheck, MessageSquareText } from 'lucide-react-native';
-import { can, colors, findPlace, paidMemberCta, radii, shadows, spacing } from '@kouskous/shared';
+import { ArrowLeft, BadgeCheck } from 'lucide-react-native';
+import { colors, findPlace, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { conversations } from '@/data/chat';
 import { useAppState } from '@/state/app-state';
-import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
 
 export default function ChatListScreen() {
   const router = useRouter();
-  const { user } = useSession();
   const { readConversationIds, markConversationRead } = useAppState();
-  const allowed = can(user, 'chat');
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -29,8 +26,7 @@ export default function ChatListScreen() {
         <Text style={styles.headerTitle}>Μηνύματα</Text>
       </View>
 
-      {allowed ? (
-        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           {conversations.map((conversation) => {
             const unread = readConversationIds.includes(conversation.id)
               ? 0
@@ -79,25 +75,7 @@ export default function ChatListScreen() {
             </Pressable>
             );
           })}
-        </ScrollView>
-      ) : (
-        <View style={styles.locked}>
-          <View style={styles.lockedIcon}>
-            <MessageSquareText size={22} color={colors.pink} />
-          </View>
-          <Text style={styles.lockedTitle}>Τα μηνύματα είναι για μέλη</Text>
-          <Text style={styles.lockedBody}>
-            Στείλε μήνυμα σε γυναίκες που γνώρισες σε events και κοινότητες.
-          </Text>
-          <Pressable
-            onPress={() => router.push('/membership')}
-            style={styles.cta}
-            accessibilityRole="button"
-          >
-            <Text style={styles.ctaLabel}>{paidMemberCta}</Text>
-          </Pressable>
-        </View>
-      )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -201,45 +179,6 @@ const styles = StyleSheet.create({
   },
   unreadLabel: {
     fontSize: 10.5,
-    fontFamily: font.extrabold,
-    color: colors.white,
-  },
-  locked: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xxl,
-    gap: spacing.md,
-  },
-  lockedIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: radii.full,
-    backgroundColor: colors.pinkSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lockedTitle: {
-    fontSize: 16.5,
-    fontFamily: font.extrabold,
-    color: colors.text,
-  },
-  lockedBody: {
-    fontSize: 12.5,
-    fontFamily: font.regular,
-    color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 19,
-  },
-  cta: {
-    marginTop: spacing.sm,
-    backgroundColor: colors.pink,
-    borderRadius: radii.pill,
-    paddingVertical: spacing.md + 2,
-    paddingHorizontal: 26,
-  },
-  ctaLabel: {
-    fontSize: 13.5,
     fontFamily: font.extrabold,
     color: colors.white,
   },

@@ -19,7 +19,7 @@ import {
   ShieldAlert,
   Video,
 } from 'lucide-react-native';
-import { can, colors, findPlace, radii, shadows, spacing } from '@kouskous/shared';
+import { colors, findPlace, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { findConversation } from '@/data/chat';
 import { findPersonByName } from '@/data/people';
@@ -60,7 +60,6 @@ export default function ConversationScreen() {
     );
   }
 
-  const allowed = can(user, 'chat');
   const messages = [...conversation.messages, ...sentMessages(conversation.id)];
 
   const attach = async (kind: 'image' | 'video') => {
@@ -153,8 +152,7 @@ export default function ConversationScreen() {
           ))}
         </ScrollView>
 
-        {allowed ? (
-          <View style={styles.composer}>
+        <View style={styles.composer}>
             <AttachmentGrid
               attachments={attachments}
               onRemove={(attachmentId) =>
@@ -196,12 +194,7 @@ export default function ConversationScreen() {
                 <SendHorizontal size={17} color={colors.white} />
               </Pressable>
             </View>
-          </View>
-        ) : (
-          <View style={styles.lockedComposer}>
-            <Text style={styles.lockedLabel}>Τα μηνύματα είναι για μέλη.</Text>
-          </View>
-        )}
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -363,17 +356,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.pink,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  lockedComposer: {
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    padding: spacing.lg,
-    alignItems: 'center',
-  },
-  lockedLabel: {
-    fontSize: 12.5,
-    fontFamily: font.medium,
-    color: colors.textMuted,
   },
 });

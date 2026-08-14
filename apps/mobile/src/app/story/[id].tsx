@@ -13,7 +13,7 @@ import {
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Heart, SendHorizontal, X } from 'lucide-react-native';
-import { can, colors, radii, spacing } from '@kouskous/shared';
+import { colors, radii, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { useSession } from '@/state/session';
 import { useStories } from '@/state/stories';
@@ -80,7 +80,6 @@ export default function StoryScreen() {
   }
 
   const frame = story.frames[Math.min(frameIndex, frameCount - 1)];
-  const canReply = can(user, 'chat');
   const mine = story.authorId === user.id;
 
   const goBack = () => {
@@ -115,7 +114,13 @@ export default function StoryScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: frame.tint }]}>
       {frame.uri && frame.kind === 'image' ? (
-        <Image source={{ uri: frame.uri }} style={styles.media} contentFit="cover" />
+        <Image
+          source={{ uri: frame.uri }}
+          style={styles.media}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={160}
+        />
       ) : null}
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         {/* Tap zones sit behind the chrome: left goes back, right forward. */}
@@ -183,7 +188,7 @@ export default function StoryScreen() {
               <View style={styles.ownFooter}>
                 <Text style={styles.ownLabel}>{story.timeAgo}</Text>
               </View>
-            ) : canReply ? (
+            ) : (
               <>
                 <TextInput
                   value={reply}
@@ -214,14 +219,6 @@ export default function StoryScreen() {
                   <SendHorizontal size={21} color={colors.white} />
                 </Pressable>
               </>
-            ) : (
-              <Pressable
-                onPress={() => router.push('/membership')}
-                style={styles.upgrade}
-                accessibilityRole="button"
-              >
-                <Text style={styles.upgradeLabel}>Γίνε μέλος για να απαντήσεις</Text>
-              </Pressable>
             )}
           </View>
         </KeyboardAvoidingView>
@@ -358,17 +355,5 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontFamily: font.bold,
     color: colors.white,
-  },
-  upgrade: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: radii.pill,
-    paddingVertical: spacing.md,
-  },
-  upgradeLabel: {
-    fontSize: 13,
-    fontFamily: font.extrabold,
-    color: colors.pinkDark,
   },
 });

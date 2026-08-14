@@ -33,7 +33,13 @@ export function AttachmentGrid({ attachments, onRemove, height = 190 }: Attachme
       ]}
     >
       {attachment.uri ? (
-        <Image source={{ uri: attachment.uri }} style={styles.image} contentFit="cover" />
+        <Image
+          source={{ uri: attachment.uri }}
+          style={styles.image}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={160}
+        />
       ) : null}
 
       {attachment.kind === 'video' ? (

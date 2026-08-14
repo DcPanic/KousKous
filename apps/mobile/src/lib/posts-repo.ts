@@ -87,16 +87,25 @@ function toPost(row: FeedRow, urls: Map<string, string>): MockPost {
     totalComments: countOf(row.comments),
     categoryId: row.category_id,
     subcategoryId: row.subcategory_id,
+    createdAt: row.created_at,
     attachments,
   };
 }
 
-export async function fetchPosts(): Promise<MockPost[]> {
-  const { data, error } = await supabase
+/** How many posts one page of the feed holds. */
+export const PAGE_SIZE = 12;
+
+/** `before` is the created_at of the last post already on screen. */
+export async function fetchPosts(before?: string): Promise<MockPost[]> {
+  let query = supabase
     .from('posts')
     .select(FEED_SELECT)
     .order('created_at', { ascending: false })
-    .limit(50);
+    .limit(PAGE_SIZE);
+
+  if (before) query = query.lt('created_at', before);
+
+  const { data, error } = await query;
 
   if (error || !data) throw error ?? new Error('feed unavailable');
 

@@ -43,7 +43,13 @@ export function Avatar({
       ]}
     >
       {uri ? (
-        <Image source={{ uri }} style={styles.photo} contentFit="cover" />
+        <Image
+          source={{ uri }}
+          style={styles.photo}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={160}
+        />
       ) : initial ? (
         <Text style={[styles.initial, { fontSize: size * 0.25 }]}>{initial}</Text>
       ) : null}
