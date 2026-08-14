@@ -10,12 +10,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Heart, SendHorizontal, X } from 'lucide-react-native';
 import { can, colors, radii, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { findStory, stories } from '@/data/mock';
 import { useSession } from '@/state/session';
+import { useStories } from '@/state/stories';
 import { Avatar } from '@/components/avatar';
 import { PlaceholderScreen } from '@/components/placeholder-screen';
 
@@ -26,9 +27,10 @@ export default function StoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useSession();
+  const { stories, find, markSeen } = useStories();
 
   const storyId = typeof id === 'string' ? id : '';
-  const story = findStory(storyId);
+  const story = find(storyId);
 
   const [frameIndex, setFrameIndex] = useState(0);
   const [reply, setReply] = useState('');
@@ -61,6 +63,12 @@ export default function StoryScreen() {
     if (frameCount > 0 && frameIndex >= frameCount) router.back();
   }, [frameIndex, frameCount, router]);
 
+  const currentFrameId = story?.frames[Math.min(frameIndex, frameCount - 1)]?.id;
+
+  useEffect(() => {
+    if (currentFrameId) markSeen(currentFrameId);
+  }, [currentFrameId, markSeen]);
+
   if (!story) {
     return (
       <PlaceholderScreen
@@ -73,6 +81,7 @@ export default function StoryScreen() {
 
   const frame = story.frames[Math.min(frameIndex, frameCount - 1)];
   const canReply = can(user, 'chat');
+  const mine = story.authorId === user.id;
 
   const goBack = () => {
     if (frameIndex > 0) {
@@ -105,6 +114,9 @@ export default function StoryScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: frame.tint }]}>
+      {frame.uri && frame.kind === 'image' ? (
+        <Image source={{ uri: frame.uri }} style={styles.media} contentFit="cover" />
+      ) : null}
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         {/* Tap zones sit behind the chrome: left goes back, right forward. */}
         <View style={styles.tapZones}>
@@ -167,7 +179,11 @@ export default function StoryScreen() {
 
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.footer}>
-            {canReply ? (
+            {mine ? (
+              <View style={styles.ownFooter}>
+                <Text style={styles.ownLabel}>{story.timeAgo}</Text>
+              </View>
+            ) : canReply ? (
               <>
                 <TextInput
                   value={reply}
@@ -217,6 +233,13 @@ export default function StoryScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+  },
+  media: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
   },
   safe: {
     flex: 1,
@@ -322,6 +345,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 13,
     fontFamily: font.regular,
+    color: colors.white,
+  },
+  ownFooter: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    borderRadius: radii.pill,
+    paddingVertical: spacing.md,
+  },
+  ownLabel: {
+    fontSize: 12.5,
+    fontFamily: font.bold,
     color: colors.white,
   },
   upgrade: {

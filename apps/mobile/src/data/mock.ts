@@ -10,15 +10,22 @@ import { daysUntilSaturday, isoDaysFromNow } from '@/lib/date';
 
 export interface StoryFrame {
   id: string;
-  /** Flat tint standing in for the photo until media storage exists. */
+  /** Flat tint, used when a frame has no uploaded file. */
   tint: string;
   caption: string;
+  /** Set on database rows. */
+  uri?: string;
+  kind?: 'image' | 'video';
 }
 
 export interface MockStory {
   id: string;
+  /** Set on database rows; the seeded rail has no accounts behind it. */
+  authorId?: string;
+  avatarUrl?: string | null;
   name: string;
   live: boolean;
+  /** How long the story stays up, e.g. "3 ώρες ακόμα". */
   timeAgo: string;
   frames: StoryFrame[];
 }

@@ -144,6 +144,21 @@ export type ReportRow = {
   created_at: string;
 };
 
+export type StoryRow = {
+  id: string;
+  author_id: string;
+  kind: 'image' | 'video';
+  storage_path: string;
+  caption: string;
+  created_at: string;
+};
+
+export type StoryViewRow = {
+  story_id: string;
+  viewer_id: string;
+  created_at: string;
+};
+
 export type MessageRow = {
   id: string;
   conversation_id: string;
@@ -193,6 +208,8 @@ export interface Database {
       blocks: Table<BlockRow, 'created_at'>;
       event_attendees: Table<EventAttendeeRow, 'created_at' | 'checked_in_at'>;
       reports: Table<ReportRow, 'id' | 'created_at' | 'status'>;
+      stories: Table<StoryRow, 'id' | 'created_at' | 'caption'>;
+      story_views: Table<StoryViewRow, 'created_at'>;
     };
     // The canonical "empty" form used by Supabase's own generated types.
     // Record<string, never> is not assignable to the library's generic

@@ -3,7 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Heart, Plus } from 'lucide-react-native';
 import { colors, gradients, layout, radii, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { stories } from '@/data/mock';
+import { useStories } from '@/state/stories';
+import { Avatar } from './avatar';
 import { DiagonalGradient } from './gradient';
 
 const SIZE = layout.storyAvatar;
@@ -11,6 +12,7 @@ const SIZE = layout.storyAvatar;
 /** Horizontal stories rail. The first slot always belongs to the viewer. */
 export function StoryRow() {
   const router = useRouter();
+  const { stories } = useStories();
 
   return (
     <ScrollView
@@ -19,7 +21,7 @@ export function StoryRow() {
       contentContainerStyle={styles.content}
     >
       <Pressable
-        onPress={() => router.push('/create')}
+        onPress={() => router.push('/create-story')}
         style={styles.item}
         accessibilityRole="button"
         accessibilityLabel="Η ιστορία σας"
@@ -42,7 +44,9 @@ export function StoryRow() {
           accessibilityLabel={`Ιστορία: ${story.name}`}
         >
           <DiagonalGradient colors={gradients.avatar} style={styles.ring}>
-            <View style={styles.ringInner} />
+            <View style={styles.ringInner}>
+              {story.avatarUrl ? <Avatar size={SIZE - 8} uri={story.avatarUrl} /> : null}
+            </View>
             {story.live ? (
               <View style={styles.liveBadge}>
                 <Text style={styles.liveLabel}>LIVE</Text>
@@ -103,6 +107,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#E3AFC0',
     borderWidth: 2.5,
     borderColor: colors.cream,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   liveBadge: {
     position: 'absolute',
