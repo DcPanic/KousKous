@@ -5,9 +5,11 @@ import {
   AlertCircle,
   Calendar,
   CheckCircle2,
+  ChevronRight,
   Plus,
   QrCode,
   Star,
+  Store,
   TrendingUp,
   Users,
   Wallet,
@@ -42,6 +44,7 @@ interface PaymentsTabProps extends TabProps {
 }
 
 export function HostOverviewTab({ paymentVerified }: TabProps) {
+  const router = useRouter();
   const progress = hostNextEvent.booked / hostNextEvent.capacity;
 
   return (
@@ -85,6 +88,25 @@ export function HostOverviewTab({ paymentVerified }: TabProps) {
           </View>
         </View>
       </View>
+
+      <DashboardEyebrow accent={ACCENT}>Το μαγαζί σου</DashboardEyebrow>
+      <Pressable
+        onPress={() => router.push('/my-shop')}
+        style={styles.shopLink}
+        accessibilityRole="button"
+        accessibilityLabel="Το μαγαζί μου"
+      >
+        <View style={styles.shopIcon}>
+          <Store size={18} color={ACCENT} />
+        </View>
+        <View style={styles.shopText}>
+          <Text style={styles.shopTitle}>Το μαγαζί μου</Text>
+          <Text style={styles.shopSubtitle}>
+            Πούλα τα προϊόντα σου μέσα στο KousKous — 0% προμήθεια.
+          </Text>
+        </View>
+        <ChevronRight size={16} color={colors.textMuted} />
+      </Pressable>
     </ScrollView>
   );
 }
@@ -263,6 +285,38 @@ const styles = StyleSheet.create({
     borderRadius: radii.xxl,
     overflow: 'hidden',
     boxShadow: shadows.card,
+  },
+  shopLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    padding: spacing.md,
+    boxShadow: shadows.card,
+  },
+  shopIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.full,
+    backgroundColor: colors.hostPurpleTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shopText: {
+    flex: 1,
+  },
+  shopTitle: {
+    fontSize: 13,
+    fontFamily: font.bold,
+    color: colors.text,
+  },
+  shopSubtitle: {
+    fontSize: 11,
+    fontFamily: font.regular,
+    color: colors.textMuted,
+    marginTop: 2,
+    lineHeight: 15,
   },
   nextEventCover: {
     height: 90,

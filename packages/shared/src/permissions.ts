@@ -27,6 +27,7 @@ export type Feature =
   | 'follow_categories'
   | 'rewards'
   | 'create_events'
+  | 'run_shop'
   | 'host_dashboard'
   | 'official_dashboard';
 
@@ -81,7 +82,7 @@ export function accessFor(
     return tier === 'official' ? 'allowed' : 'locked';
   }
 
-  if (feature === 'host_dashboard' || feature === 'create_events') {
+  if (feature === 'host_dashboard' || feature === 'create_events' || feature === 'run_shop') {
     return tier === 'host' || tier === 'official' ? 'allowed' : 'locked';
   }
 
@@ -101,6 +102,20 @@ export function can(
   feature: Feature,
 ): boolean {
   return accessFor(user, feature) === 'allowed';
+}
+
+/**
+ * Whether a shop can actually take money.
+ *
+ * Opening a shop and listing products only needs community approval;
+ * selling needs the payment account too. The two gates are independent,
+ * exactly as they are for paid events (§2.3), so a newly approved host
+ * can set her shop up while the Stripe onboarding is still in progress.
+ */
+export function canSell(
+  user: Pick<User, 'is_host' | 'community_approved' | 'payment_verified' | 'is_official'>,
+): boolean {
+  return canCreatePaidEvents(user);
 }
 
 /**

@@ -23,7 +23,26 @@ export const SUPABASE_ANON_KEY =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqZnp0c29hbWN0d2VyYnZkb3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyOTg5MjgsImV4cCI6MjEwMTg3NDkyOH0.nNRoGq5Cc7Z1_z-d4j6FnCenH29wt483qF-WX7rMZME';
 
+/** How long a single request may hang before it is treated as failed. */
+const REQUEST_TIMEOUT_MS = 12_000;
+
+/**
+ * On a weak mobile connection a request can stay pending indefinitely, and
+ * every screen that waits on one would sit on its spinner forever. Bounding
+ * the wait turns that into an ordinary error the screens already handle.
+ */
+function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  // A caller-supplied signal still has to win, so both are honoured.
+  init?.signal?.addEventListener('abort', () => controller.abort());
+
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  global: { fetch: fetchWithTimeout },
   auth: {
     // AsyncStorage keeps the session on device. On web the SDK's default
     // localStorage is correct, and AsyncStorage is not available during

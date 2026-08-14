@@ -19,6 +19,7 @@ import {
   LogOut,
   Settings,
   Sparkles,
+  Store,
   UserPlus,
   X,
   type LucideIcon,
@@ -154,6 +155,14 @@ export function DrawerMenu() {
           ))}
 
           <DrawerSection label="Λογαριασμός" />
+          <DrawerRow
+            icon={Store}
+            label="Μαγαζιά"
+            onPress={() => {
+              closeDrawer();
+              router.push('/shops');
+            }}
+          />
           <DrawerRow
             icon={Bookmark}
             label="Αγαπημένα"

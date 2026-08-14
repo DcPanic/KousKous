@@ -161,6 +161,57 @@ export type StoryViewRow = {
   created_at: string;
 };
 
+export type ShopRow = {
+  id: string;
+  host_id: string;
+  name: string;
+  description: string;
+  logo_path: string | null;
+  location: string | null;
+  is_open: boolean;
+  created_at: string;
+};
+
+export type ProductRow = {
+  id: string;
+  shop_id: string;
+  title: string;
+  description: string;
+  price_cents: number;
+  stock: number | null;
+  category_id: string | null;
+  subcategory_id: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type ProductMediaRow = {
+  id: string;
+  product_id: string;
+  storage_path: string;
+  position: number;
+};
+
+export type OrderRow = {
+  id: string;
+  buyer_id: string;
+  shop_id: string;
+  total_cents: number;
+  status: string;
+  /** The payment lives on the host's Stripe account, not here. */
+  stripe_payment_intent_id: string | null;
+  note: string;
+  created_at: string;
+};
+
+export type OrderItemRow = {
+  id: string;
+  order_id: string;
+  product_id: string;
+  quantity: number;
+  unit_price_cents: number;
+};
+
 export type MessageRow = {
   id: string;
   conversation_id: string;
@@ -212,6 +263,11 @@ export interface Database {
       reports: Table<ReportRow, 'id' | 'created_at' | 'status'>;
       stories: Table<StoryRow, 'id' | 'created_at' | 'caption'>;
       story_views: Table<StoryViewRow, 'created_at'>;
+      shops: Table<ShopRow, 'id' | 'created_at' | 'description' | 'is_open' | 'logo_path' | 'location'>;
+      products: Table<ProductRow, 'id' | 'created_at' | 'description' | 'is_active'>;
+      product_media: Table<ProductMediaRow, 'id' | 'position'>;
+      orders: Table<OrderRow, 'id' | 'created_at' | 'status' | 'note' | 'stripe_payment_intent_id'>;
+      order_items: Table<OrderItemRow, 'id'>;
     };
     // The canonical "empty" form used by Supabase's own generated types.
     // Record<string, never> is not assignable to the library's generic
