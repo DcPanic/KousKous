@@ -103,7 +103,9 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.cream,
+    // The rows carry their own hairlines, so the list sits on white
+    // rather than on cream with floating cards.
+    backgroundColor: colors.surface,
   },
   content: {
     paddingBottom: layout.tabBarHeight,

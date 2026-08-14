@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Crown, MapPin, Pencil } from 'lucide-react-native';
 import {
   colors,
@@ -17,7 +17,7 @@ import { useAppState } from '@/state/app-state';
 import { useFeed } from '@/state/feed';
 import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
-import { PostGrid } from '@/components/post-grid';
+import { PostCard } from '@/components/post-card';
 
 export default function ProfileScreen() {
   const { user, tier, signedIn } = useSession();
@@ -41,55 +41,53 @@ export default function ProfileScreen() {
     [posts, savedPostIds],
   );
 
-  const stats: [string, string][] = signedIn
+  // One line rather than three stat columns, which is what makes the
+  // header feel like a dashboard instead of a profile.
+  const countsLine = signedIn
     ? [
-        [String(myPosts.length), 'Posts'],
-        [String(savedPostIds.length), 'Αγαπημένα'],
-        [String(joinedEventIds.length), 'Events'],
-      ]
-    : profileStats;
+        `${myPosts.length} δημοσιεύσεις`,
+        `${savedPostIds.length} αποθηκευμένα`,
+        `${joinedEventIds.length} events`,
+      ].join('  ·  ')
+    : profileStats.map(([value, label]) => `${value} ${label.toLowerCase()}`).join('  ·  ');
 
-  return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
+  const header = (
+    <View>
+      <View style={styles.identityRow}>
+        <View style={styles.identityText}>
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>{user.name}</Text>
+            {isOfficial ? (
+              <View style={styles.officialBadge}>
+                <Crown size={9} color={colors.white} fill={colors.white} />
+              </View>
+            ) : null}
+          </View>
+
+          {isOfficial ? <Text style={styles.officialLabel}>Official Account</Text> : null}
+
+          {cityName ? (
+            <View style={styles.locationRow}>
+              <MapPin size={12} color={colors.textMuted} />
+              <Text style={styles.location}>{cityName}</Text>
+            </View>
+          ) : null}
+        </View>
+
         <Avatar
-          size={isOfficial ? 82 : 74}
+          size={isOfficial ? 74 : 66}
           uri={user.avatar_url ?? undefined}
           initial={isOfficial ? 'K' : undefined}
           ringColor={isOfficial ? colors.gold : undefined}
           gradient={isOfficial ? gradients.officialCover : undefined}
         />
-        <View style={styles.stats}>
-          {stats.map(([value, label]) => (
-            <View key={label} style={styles.stat}>
-              <Text style={styles.statValue}>{value}</Text>
-              <Text style={styles.statLabel}>{label}</Text>
-            </View>
-          ))}
-        </View>
       </View>
 
-      <View style={styles.identity}>
-        <View style={styles.nameRow}>
-          <Text style={styles.name}>{user.name}</Text>
-          {isOfficial ? (
-            <View style={styles.officialBadge}>
-              <Crown size={9} color={colors.white} fill={colors.white} />
-            </View>
-          ) : null}
-        </View>
+      {user.bio ? <Text style={styles.bio}>{user.bio}</Text> : null}
 
-        {isOfficial ? <Text style={styles.officialLabel}>Official Account</Text> : null}
+      <Text style={styles.counts}>{countsLine}</Text>
 
-        {user.bio ? <Text style={styles.bio}>{user.bio}</Text> : null}
-
-        {cityName ? (
-          <View style={styles.locationRow}>
-            <MapPin size={12} color={colors.textMuted} />
-            <Text style={styles.location}>{cityName}</Text>
-          </View>
-        ) : null}
-
+      <View style={styles.buttons}>
         {/* Her own profile only — /u/[id] is someone else's and has follow
             and message instead. */}
         <Pressable
@@ -109,21 +107,21 @@ export default function ProfileScreen() {
             accessibilityRole="button"
           >
             <Text style={styles.upgradeLabel}>
-              Αναβάθμιση σε Μέλος · €{PAID_MEMBER_PRICE_EUR.toFixed(2).replace('.', ',')}
+              Μέλος · €{PAID_MEMBER_PRICE_EUR.toFixed(2).replace('.', ',')}
             </Text>
           </Pressable>
         ) : null}
 
         {tier === 'host' ? (
           <Pressable style={styles.hostCta} onPress={() => router.push('/host')} accessibilityRole="button">
-            <Text style={styles.upgradeLabel}>Dashboard Διοργανώτριας</Text>
+            <Text style={styles.upgradeLabel}>Dashboard</Text>
           </Pressable>
         ) : null}
 
         {isOfficial ? (
           <Pressable style={styles.officialCta} onPress={() => router.push('/official')} accessibilityRole="button">
-            <Crown size={16} color={colors.gold} />
-            <Text style={styles.upgradeLabel}>Άνοιγμα Official Dashboard</Text>
+            <Crown size={15} color={colors.gold} />
+            <Text style={styles.upgradeLabel}>Dashboard</Text>
           </Pressable>
         ) : null}
       </View>
@@ -131,7 +129,7 @@ export default function ProfileScreen() {
       <View style={styles.tabs}>
         {(
           [
-            ['mine', 'Οι δημοσιεύσεις μου'],
+            ['mine', 'Δημοσιεύσεις'],
             ['saved', 'Αποθηκευμένα'],
           ] as const
         ).map(([key, label]) => {
@@ -149,63 +147,78 @@ export default function ProfileScreen() {
           );
         })}
       </View>
+    </View>
+  );
 
-      {tab === 'mine' ? (
-        <PostGrid
-          posts={myPosts}
-          emptyLabel={
-            signedIn
+  const shown = tab === 'mine' ? myPosts : savedPosts;
+
+  return (
+    <FlatList
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      data={shown}
+      keyExtractor={(post) => post.id}
+      renderItem={({ item }) => <PostCard post={item} />}
+      ListHeaderComponent={header}
+      ListEmptyComponent={
+        <Text style={styles.empty}>
+          {tab === 'saved'
+            ? 'Δεν έχεις αποθηκεύσει καμία δημοσίευση.'
+            : signedIn
               ? 'Δεν έχεις δημοσιεύσει τίποτα ακόμα. Πάτα το + για την πρώτη σου δημοσίευση.'
-              : 'Κάνε σύνδεση για να δεις τις δημοσιεύσεις σου.'
-          }
-        />
-      ) : (
-        <PostGrid
-          posts={savedPosts}
-          emptyLabel="Δεν έχεις αποθηκεύσει καμία δημοσίευση."
-        />
-      )}
-    </ScrollView>
+              : 'Κάνε σύνδεση για να δεις τις δημοσιεύσεις σου.'}
+        </Text>
+      }
+      showsVerticalScrollIndicator={false}
+      initialNumToRender={4}
+      maxToRenderPerBatch={4}
+      windowSize={7}
+      removeClippedSubviews
+    />
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.cream,
+    // White, so the hairlines between posts read as separators rather
+    // than as edges of floating cards.
+    backgroundColor: colors.surface,
   },
   content: {
     paddingBottom: layout.tabBarHeight,
   },
-  header: {
+  identityRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 18,
+    alignItems: 'flex-start',
+    gap: spacing.lg,
     paddingHorizontal: spacing.screen,
     paddingTop: spacing.screen,
-    paddingBottom: spacing.md + 2,
   },
-  stats: {
+  identityText: {
     flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
   },
-  stat: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 16,
-    fontFamily: font.extrabold,
-    color: colors.text,
-  },
-  statLabel: {
-    fontSize: 11,
+  counts: {
+    fontSize: 12.5,
     fontFamily: font.regular,
     color: colors.textMuted,
-  },
-  identity: {
     paddingHorizontal: spacing.screen,
-    paddingBottom: spacing.lg,
+    marginTop: spacing.md,
+  },
+  buttons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.screen,
+    marginTop: spacing.md,
+  },
+  empty: {
+    fontSize: 12.5,
+    fontFamily: font.regular,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 19,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.xxl,
   },
   nameRow: {
     flexDirection: 'row',
@@ -213,7 +226,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   name: {
-    fontSize: 15,
+    fontSize: 19,
     fontFamily: font.extrabold,
     color: colors.text,
   },
@@ -232,11 +245,12 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   bio: {
-    fontSize: 12.5,
+    fontSize: 13,
     fontFamily: font.regular,
     color: colors.textSecondary,
     lineHeight: 19,
-    marginTop: 6,
+    paddingHorizontal: spacing.screen,
+    marginTop: spacing.md,
   },
   locationRow: {
     flexDirection: 'row',
@@ -250,6 +264,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   editProfile: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -259,7 +274,6 @@ const styles = StyleSheet.create({
     borderColor: colors.borderChip,
     backgroundColor: colors.surface,
     paddingVertical: spacing.md - 1,
-    marginTop: spacing.md,
   },
   editProfileLabel: {
     fontSize: 12.5,
@@ -267,21 +281,21 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   upgrade: {
-    marginTop: spacing.md,
+    flex: 1,
     backgroundColor: colors.pink,
     borderRadius: radii.md,
     paddingVertical: 11,
     alignItems: 'center',
   },
   hostCta: {
-    marginTop: spacing.md,
+    flex: 1,
     backgroundColor: colors.hostPurple,
     borderRadius: radii.md,
     paddingVertical: 11,
     alignItems: 'center',
   },
   officialCta: {
-    marginTop: spacing.md,
+    flex: 1,
     backgroundColor: colors.aubergine,
     borderRadius: radii.lg,
     paddingVertical: 13,
@@ -297,9 +311,9 @@ const styles = StyleSheet.create({
   },
   tabs: {
     flexDirection: 'row',
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    marginTop: spacing.lg,
   },
   tab: {
     flex: 1,
