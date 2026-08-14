@@ -30,6 +30,8 @@ export interface MockComment {
 
 export interface MockPost {
   id: string;
+  /** Set on database rows; absent on seeded content. */
+  authorId?: string;
   author: string;
   verified: boolean;
   location: string;

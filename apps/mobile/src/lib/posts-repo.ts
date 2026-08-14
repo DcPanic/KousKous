@@ -71,6 +71,7 @@ function toPost(row: FeedRow): MockPost {
 
   return {
     id: row.id,
+    authorId: row.author_id,
     author: row.author?.name ?? 'Μέλος',
     verified: row.author?.is_verified ?? false,
     location: row.location ?? '',

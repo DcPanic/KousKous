@@ -1,5 +1,6 @@
+import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Crown, MapPin } from 'lucide-react-native';
 import {
   colors,
@@ -11,21 +12,42 @@ import {
   spacing,
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { profileGridColors, profileStats } from '@/data/mock';
+import { profileStats } from '@/data/mock';
+import { useAppState } from '@/state/app-state';
+import { useFeed } from '@/state/feed';
 import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
-
-const GRID_COLUMNS = 3;
-const GRID_GAP = 2;
+import { PostGrid } from '@/components/post-grid';
 
 export default function ProfileScreen() {
-  const { user, tier } = useSession();
+  const { user, tier, signedIn } = useSession();
+  const { posts } = useFeed();
+  const { savedPostIds, joinedEventIds } = useAppState();
   const router = useRouter();
-  const { width } = useWindowDimensions();
+  const [tab, setTab] = useState<'mine' | 'saved'>('mine');
 
-  const tileSize = (width - GRID_GAP * (GRID_COLUMNS + 1)) / GRID_COLUMNS;
   const cityName = user.location ? findLocation(user.location)?.name : null;
   const isOfficial = tier === 'official';
+
+  // Seeded content has no author id, so the preview account shows nothing
+  // of its own rather than claiming someone else's posts.
+  const myPosts = useMemo(
+    () => (signedIn ? posts.filter((post) => post.authorId === user.id) : []),
+    [posts, signedIn, user.id],
+  );
+
+  const savedPosts = useMemo(
+    () => posts.filter((post) => savedPostIds.includes(post.id)),
+    [posts, savedPostIds],
+  );
+
+  const stats: [string, string][] = signedIn
+    ? [
+        [String(myPosts.length), 'Posts'],
+        [String(savedPostIds.length), 'Αγαπημένα'],
+        [String(joinedEventIds.length), 'Events'],
+      ]
+    : profileStats;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -37,7 +59,7 @@ export default function ProfileScreen() {
           gradient={isOfficial ? gradients.officialCover : undefined}
         />
         <View style={styles.stats}>
-          {profileStats.map(([value, label]) => (
+          {stats.map(([value, label]) => (
             <View key={label} style={styles.stat}>
               <Text style={styles.statValue}>{value}</Text>
               <Text style={styles.statLabel}>{label}</Text>
@@ -94,21 +116,42 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.tabs}>
-        {['Grid', 'Tagged'].map((label, index) => (
-          <View key={label} style={[styles.tab, index === 0 && styles.tabActive]}>
-            <Text style={[styles.tabLabel, index === 0 && styles.tabLabelActive]}>{label}</Text>
-          </View>
-        ))}
+        {(
+          [
+            ['mine', 'Οι δημοσιεύσεις μου'],
+            ['saved', 'Αποθηκευμένα'],
+          ] as const
+        ).map(([key, label]) => {
+          const active = key === tab;
+          return (
+            <Pressable
+              key={key}
+              onPress={() => setTab(key)}
+              style={[styles.tab, active && styles.tabActive]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+            >
+              <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{label}</Text>
+            </Pressable>
+          );
+        })}
       </View>
 
-      <View style={styles.grid}>
-        {profileGridColors.map((color, index) => (
-          <View
-            key={`${color}-${index}`}
-            style={{ width: tileSize, height: tileSize, backgroundColor: color }}
-          />
-        ))}
-      </View>
+      {tab === 'mine' ? (
+        <PostGrid
+          posts={myPosts}
+          emptyLabel={
+            signedIn
+              ? 'Δεν έχεις δημοσιεύσει τίποτα ακόμα. Πάτα το + για την πρώτη σου δημοσίευση.'
+              : 'Κάνε σύνδεση για να δεις τις δημοσιεύσεις σου.'
+          }
+        />
+      ) : (
+        <PostGrid
+          posts={savedPosts}
+          emptyLabel="Δεν έχεις αποθηκεύσει καμία δημοσίευση."
+        />
+      )}
     </ScrollView>
   );
 }
@@ -245,11 +288,5 @@ const styles = StyleSheet.create({
   },
   tabLabelActive: {
     color: colors.pink,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: GRID_GAP,
-    padding: GRID_GAP,
   },
 });
