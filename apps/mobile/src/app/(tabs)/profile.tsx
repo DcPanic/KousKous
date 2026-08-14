@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Crown, MapPin } from 'lucide-react-native';
+import { Crown, MapPin, Pencil } from 'lucide-react-native';
 import {
   colors,
   findLocation,
@@ -89,6 +89,18 @@ export default function ProfileScreen() {
             <Text style={styles.location}>{cityName}</Text>
           </View>
         ) : null}
+
+        {/* Her own profile only — /u/[id] is someone else's and has follow
+            and message instead. */}
+        <Pressable
+          style={styles.editProfile}
+          onPress={() => router.push('/edit-profile')}
+          accessibilityRole="button"
+          accessibilityLabel="Επεξεργασία προφίλ"
+        >
+          <Pencil size={14} color={colors.text} />
+          <Text style={styles.editProfileLabel}>Επεξεργασία προφίλ</Text>
+        </Pressable>
 
         {tier === 'free' ? (
           <Pressable
@@ -236,6 +248,23 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontFamily: font.regular,
     color: colors.textMuted,
+  },
+  editProfile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: radii.md,
+    borderWidth: 1.3,
+    borderColor: colors.borderChip,
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.md - 1,
+    marginTop: spacing.md,
+  },
+  editProfileLabel: {
+    fontSize: 12.5,
+    fontFamily: font.bold,
+    color: colors.text,
   },
   upgrade: {
     marginTop: spacing.md,
