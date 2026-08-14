@@ -39,6 +39,7 @@ export type PostRow = {
   hashtags: string;
   location: string | null;
   category_id: string | null;
+  subcategory_id: string | null;
   created_at: string;
 }
 
@@ -75,6 +76,7 @@ export type EventRow = {
   title: string;
   description: string;
   category_id: string | null;
+  subcategory_id: string | null;
   location: string;
   venue: string | null;
   starts_at: string;
@@ -193,7 +195,7 @@ export interface Database {
   public: {
     Tables: {
       profiles: Table<ProfileRow, Exclude<keyof ProfileRow, 'id' | 'name'>>;
-      posts: Table<PostRow, 'id' | 'created_at' | 'caption' | 'hashtags'>;
+      posts: Table<PostRow, 'id' | 'created_at' | 'caption' | 'hashtags' | 'subcategory_id'>;
       comments: Table<CommentRow, 'id' | 'created_at'>;
       threads: Table<ThreadRow, 'id' | 'created_at' | 'body' | 'pinned'>;
       thread_replies: Table<ThreadReplyRow, 'id' | 'created_at' | 'body'>;

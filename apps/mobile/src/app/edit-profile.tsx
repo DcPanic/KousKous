@@ -13,9 +13,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, Check, Info, Search, X } from 'lucide-react-native';
 import {
-  categories,
   colors,
+  findCategory,
   findPlace,
+  findSubcategory,
   radii,
   searchPlaces,
   spacing,
@@ -27,9 +28,15 @@ import { avatarUrl, toUploadable } from '@/lib/storage-media';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
+import { CategoryPicker } from '@/components/category-picker';
 
 const BIO_LIMIT = 160;
 const MAX_INTERESTS = 5;
+
+/** An interest is either a category or one of its subcategories. */
+function interestLabel(id: string): string {
+  return findSubcategory(id)?.name ?? findCategory(id)?.name ?? id;
+}
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -57,12 +64,14 @@ export default function EditProfileScreen() {
     if (picked.length > 0) setAvatarUri(picked[0].uri);
   };
 
-  const toggleInterest = (id: string) => {
-    setInterests((prev) => {
-      if (prev.includes(id)) return prev.filter((item) => item !== id);
-      if (prev.length >= MAX_INTERESTS) return prev;
-      return [...prev, id];
-    });
+  const addInterest = (id: string) => {
+    setInterests((prev) =>
+      prev.includes(id) || prev.length >= MAX_INTERESTS ? prev : [...prev, id],
+    );
+  };
+
+  const removeInterest = (id: string) => {
+    setInterests((prev) => prev.filter((item) => item !== id));
   };
 
   const save = async () => {
@@ -234,31 +243,38 @@ export default function EditProfileScreen() {
             </>
           )}
 
-          <Text style={styles.label}>{toGreekUpperCase('Τα ενδιαφέροντά σου')}</Text>
+          <CategoryPicker
+            label="Τα ενδιαφέροντά σου"
+            placeholder={
+              interests.length >= MAX_INTERESTS
+                ? `Έφτασες τα ${MAX_INTERESTS}`
+                : 'Πρόσθεσε ενδιαφέρον'
+            }
+            value={null}
+            onChange={(choice) => {
+              if (!choice) return;
+              addInterest(choice.subcategoryId ?? choice.categoryId);
+            }}
+            optional={false}
+          />
           <Text style={styles.hint}>
-            Διάλεξε έως {MAX_INTERESTS} — εμφανίζονται στο προφίλ σου και βοηθούν να σε βρίσκουν
-            γυναίκες με τα ίδια ενδιαφέροντα.
+            Έως {MAX_INTERESTS} — εμφανίζονται στο προφίλ σου και βοηθούν να σε βρίσκουν γυναίκες με
+            τα ίδια ενδιαφέροντα.
           </Text>
+
           <View style={styles.chipWrap}>
-            {categories.map((category) => {
-              const selected = interests.includes(category.id);
-              const full = interests.length >= MAX_INTERESTS && !selected;
-              return (
-                <Pressable
-                  key={category.id}
-                  onPress={() => toggleInterest(category.id)}
-                  disabled={full}
-                  style={[styles.chip, selected && styles.chipActive, full && styles.chipDisabled]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                >
-                  <Text style={styles.chipEmoji}>{category.emoji}</Text>
-                  <Text style={[styles.chipLabel, selected && styles.chipLabelActive]}>
-                    {category.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            {interests.map((id) => (
+              <Pressable
+                key={id}
+                onPress={() => removeInterest(id)}
+                style={[styles.chip, styles.chipActive]}
+                accessibilityRole="button"
+                accessibilityLabel={`Αφαίρεση: ${interestLabel(id)}`}
+              >
+                <Text style={[styles.chipLabel, styles.chipLabelActive]}>{interestLabel(id)}</Text>
+                <X size={12} color={colors.pinkDark} />
+              </Pressable>
+            ))}
           </View>
 
           {saveError ? (

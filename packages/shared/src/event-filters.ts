@@ -17,6 +17,7 @@ export const eventCategories: EventCategory[] = [
   { id: 'beach', name: 'Θάλασσα', emoji: '🏖️' },
   { id: 'drinks', name: 'Ποτό & Μπαράκι', emoji: '🍹' },
   { id: 'food', name: 'Φαγητό', emoji: '🍽️' },
+  { id: 'coffee', name: 'Καφές & Brunch', emoji: '☕' },
   { id: 'trip', name: 'Ταξίδι & Εκδρομή', emoji: '✈️' },
   { id: 'wellness', name: 'Ευεξία & Yoga', emoji: '🧘' },
   { id: 'fitness', name: 'Άθληση', emoji: '🏋️' },
@@ -26,6 +27,11 @@ export const eventCategories: EventCategory[] = [
   { id: 'party', name: 'Πάρτι', emoji: '🎉' },
   { id: 'moms', name: 'Μαμάδες & παιδιά', emoji: '👶' },
   { id: 'nature', name: 'Φύση & Πεζοπορία', emoji: '🥾' },
+  { id: 'music', name: 'Μουσική & Συναυλίες', emoji: '🎶' },
+  { id: 'cinema', name: 'Σινεμά & Θέατρο', emoji: '🎬' },
+  { id: 'books', name: 'Book club', emoji: '📚' },
+  { id: 'beauty', name: 'Beauty & Στιλ', emoji: '💄' },
+  { id: 'volunteering', name: 'Εθελοντισμός', emoji: '🤝' },
 ];
 
 export function findEventCategory(id: string): EventCategory | undefined {

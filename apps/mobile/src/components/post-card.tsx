@@ -10,7 +10,15 @@ import {
   Send,
   type LucideIcon,
 } from 'lucide-react-native';
-import { colors, gradients, radii, shadows, spacing } from '@kouskous/shared';
+import {
+  colors,
+  findCategory,
+  findSubcategory,
+  gradients,
+  radii,
+  shadows,
+  spacing,
+} from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import type { MockPost } from '@/data/mock';
 import { findPersonByName } from '@/data/people';
@@ -48,6 +56,12 @@ export function PostCard({ post, openable = true }: PostCardProps) {
   // Only seeded authors have a profile; posts written in the app are the
   // signed-in user's own, so there is nothing to open.
   const person = findPersonByName(post.author);
+
+  const category = post.categoryId ? findCategory(post.categoryId) : undefined;
+  const subcategory = post.subcategoryId ? findSubcategory(post.subcategoryId) : undefined;
+  const categoryLabel = category
+    ? `${category.emoji} ${category.name}${subcategory ? ` · ${subcategory.name}` : ''}`
+    : null;
 
   return (
     <View style={styles.card}>
@@ -88,6 +102,12 @@ export function PostCard({ post, openable = true }: PostCardProps) {
         postId={post.id}
         author={post.author}
       />
+
+      {categoryLabel ? (
+        <View style={styles.categoryChip}>
+          <Text style={styles.categoryChipLabel}>{categoryLabel}</Text>
+        </View>
+      ) : null}
 
       {post.caption.length > 0 ? <Text style={styles.caption}>{post.caption}</Text> : null}
       {post.hashtags.length > 0 ? <Text style={styles.hashtags}>{post.hashtags}</Text> : null}
@@ -235,6 +255,19 @@ const styles = StyleSheet.create({
     fontFamily: font.regular,
     color: colors.textMuted,
     marginTop: 1,
+  },
+  categoryChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.pinkSoft,
+    borderRadius: radii.full,
+    paddingVertical: 4,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  categoryChipLabel: {
+    fontSize: 10.5,
+    fontFamily: font.bold,
+    color: colors.pinkDark,
   },
   caption: {
     fontSize: 13.5,

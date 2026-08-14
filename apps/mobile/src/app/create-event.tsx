@@ -29,6 +29,7 @@ import type { Attachment } from '@/data/forum';
 import { pickMedia } from '@/lib/media';
 import { useSession } from '@/state/session';
 import { AttachmentGrid } from '@/components/attachments';
+import { SimplePicker } from '@/components/simple-picker';
 import { DateRangeCalendar } from '@/components/date-range-calendar';
 import { PlaceholderScreen } from '@/components/placeholder-screen';
 
@@ -150,26 +151,14 @@ export default function CreateEventScreen() {
             multiline
           />
 
-          <Text style={styles.sectionTitle}>{toGreekUpperCase('Κατηγορία')}</Text>
-          <View style={styles.chipWrap}>
-            {eventCategories.map((category) => {
-              const selected = category.id === categoryId;
-              return (
-                <Pressable
-                  key={category.id}
-                  onPress={() => setCategoryId(selected ? null : category.id)}
-                  style={[styles.chip, selected && styles.chipActive]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                >
-                  <Text style={styles.chipEmoji}>{category.emoji}</Text>
-                  <Text style={[styles.chipLabel, selected && styles.chipLabelActive]}>
-                    {category.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <SimplePicker
+            label="Κατηγορία"
+            placeholder="Διάλεξε τι είδους event είναι"
+            options={eventCategories}
+            value={categoryId}
+            onChange={setCategoryId}
+            accent={colors.hostPurple}
+          />
 
           <Text style={styles.sectionTitle}>{toGreekUpperCase('Πού')}</Text>
           <Pressable

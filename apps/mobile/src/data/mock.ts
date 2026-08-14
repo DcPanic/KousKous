@@ -56,6 +56,8 @@ export interface MockPost {
   totalComments: number;
   /** Drives the "Ακολουθείτε" tab. */
   categoryId: string | null;
+  /** Narrows the category, e.g. Beauty · Μαλλιά. */
+  subcategoryId?: string | null;
   /** Present on posts written in the app; seeded posts use mediaCount. */
   attachments?: Attachment[];
 }

@@ -15,7 +15,7 @@ import { supabase } from '@/lib/supabase';
 
 /** What the feed query selects, joins included. */
 const FEED_SELECT = `
-  id, caption, hashtags, location, category_id, created_at, author_id,
+  id, caption, hashtags, location, category_id, subcategory_id, created_at, author_id,
   author:profiles!posts_author_id_fkey (name, is_verified, avatar_url),
   media:post_media (id, kind, storage_path, position),
   likes:post_likes (count),
@@ -41,6 +41,7 @@ interface FeedRow {
   hashtags: string;
   location: string | null;
   category_id: string | null;
+  subcategory_id: string | null;
   created_at: string;
   author_id: string;
   author: JoinedAuthor | null;
@@ -85,6 +86,7 @@ function toPost(row: FeedRow, urls: Map<string, string>): MockPost {
     commentPreviews: [],
     totalComments: countOf(row.comments),
     categoryId: row.category_id,
+    subcategoryId: row.subcategory_id,
     attachments,
   };
 }
@@ -111,6 +113,7 @@ export interface NewPost {
   hashtags: string;
   location: string | null;
   categoryId: string | null;
+  subcategoryId: string | null;
   attachments: Attachment[];
 }
 
@@ -129,6 +132,7 @@ export async function createPost(authorId: string, input: NewPost): Promise<stri
       hashtags: input.hashtags,
       location: input.location,
       category_id: input.categoryId,
+      subcategory_id: input.subcategoryId,
     })
     .select('id')
     .single();

@@ -47,6 +47,127 @@ export const categories: Category[] = [
   { id: 'travel', name: 'Travel', emoji: '✈️', group: 'travel' },
 ];
 
+/**
+ * Subcategories.
+ *
+ * The 14 categories above are the forums and stay as they are (§4); these
+ * only narrow a post, an event or an interest. Keeping them out of the
+ * forum list means the community structure does not fragment into
+ * dozens of half-empty rooms.
+ */
+export interface Subcategory {
+  id: string;
+  categoryId: string;
+  name: string;
+}
+
+const SUBCATEGORY_NAMES: Record<string, string[]> = {
+  beauty: [
+    'Περιποίηση προσώπου',
+    'Μακιγιάζ',
+    'Μαλλιά',
+    'Νύχια',
+    'Αντηλιακά',
+    'Αρώματα',
+    'Αισθητικός & θεραπείες',
+  ],
+  fashion: [
+    'Καθημερινό στιλ',
+    'Βραδινά',
+    'Παπούτσια',
+    'Τσάντες',
+    'Κοσμήματα',
+    'Second-hand & vintage',
+    'Νυφικά',
+  ],
+  fitness: ['Γυμναστήριο', 'Pilates', 'Yoga', 'Τρέξιμο', 'Χορός', 'Διατροφή', 'Κολύμβηση'],
+  recipes: [
+    'Γλυκά & ζαχαροπλαστική',
+    'Ζυμαρικά',
+    'Σαλάτες',
+    'Vegan & χορτοφαγικά',
+    'Ψήσιμο & ψωμί',
+    'Γρήγορα γεύματα',
+    'Παραδοσιακά',
+  ],
+  home: ['Διακόσμηση', 'Καθαριότητα & οργάνωση', 'Φυτά', 'DIY', 'Μετακόμιση', 'Ανακαίνιση'],
+  books: [
+    'Μυθιστόρημα',
+    'Αστυνομικό & θρίλερ',
+    'Ψυχολογία & αυτοβελτίωση',
+    'Ελληνική λογοτεχνία',
+    'Ποίηση',
+    'Book club',
+  ],
+  movies: ['Σειρές', 'Ταινίες', 'Ντοκιμαντέρ', 'Ελληνικά', 'Έξοδος στο σινεμά'],
+  gaming: ['Mobile games', 'Κονσόλες', 'PC', 'Επιτραπέζια'],
+
+  relationships: [
+    'Γνωριμίες & ραντεβού',
+    'Σχέση & συμβίωση',
+    'Γάμος',
+    'Χωρισμός',
+    'Φιλίες',
+    'Οικογένεια',
+  ],
+  moms: [
+    'Εγκυμοσύνη',
+    'Γέννα',
+    'Βρέφη 0-2',
+    'Νηπιαγωγείο',
+    'Σχολείο',
+    'Εφηβεία',
+    'Μαμά & καριέρα',
+    'Μόνη μαμά',
+  ],
+  students: [
+    'Πανεπιστήμιο',
+    'Εξετάσεις',
+    'Φοιτητική ζωή',
+    'Erasmus',
+    'Φοιτητικό σπίτι',
+    'Μεταπτυχιακά',
+  ],
+  career: [
+    'Αναζήτηση εργασίας',
+    'Επιχειρηματικότητα',
+    'Freelance',
+    'Μισθοί & διαπραγμάτευση',
+    'Ισορροπία ζωής',
+    'Αλλαγή καριέρας',
+  ],
+  pets: ['Σκύλοι', 'Γάτες', 'Υιοθεσία', 'Κτηνίατρος & υγεία', 'Εκπαίδευση'],
+
+  travel: [
+    'Ελλάδα',
+    'Κύπρος',
+    'Εξωτερικό',
+    'Νησιά',
+    'Σόλο ταξίδι',
+    'Οδικά ταξίδια',
+    'Οικονομικά ταξίδια',
+    'City break',
+  ],
+};
+
+/** Ids are derived so the list stays a single source of truth. */
+export const subcategories: Subcategory[] = Object.entries(SUBCATEGORY_NAMES).flatMap(
+  ([categoryId, names]) =>
+    names.map((name, index) => ({
+      id: `${categoryId}-${index + 1}`,
+      categoryId,
+      name,
+    })),
+);
+
+export function subcategoriesFor(categoryId: string): Subcategory[] {
+  return subcategories.filter((subcategory) => subcategory.categoryId === categoryId);
+}
+
+export function findSubcategory(id: string): Subcategory | undefined {
+  return subcategories.find((subcategory) => subcategory.id === id);
+}
+
 export function categoriesByGroup(group: CategoryGroup): Category[] {
   return categories.filter((category) => category.group === group);
 }

@@ -13,7 +13,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ImagePlus, MapPin, Video, X } from 'lucide-react-native';
 import {
-  categories,
   colors,
   findPlace,
   places,
@@ -27,6 +26,7 @@ import { pickMedia } from '@/lib/media';
 import { useFeed } from '@/state/feed';
 import { useSession } from '@/state/session';
 import { AttachmentGrid } from '@/components/attachments';
+import { CategoryPicker, type CategoryChoice } from '@/components/category-picker';
 import { Avatar } from '@/components/avatar';
 
 /** Cities and areas only — a post belongs somewhere specific. */
@@ -42,7 +42,7 @@ export default function CreatePostScreen() {
   const [caption, setCaption] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [placeId, setPlaceId] = useState<string>(user.location ?? 'athens');
-  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [category, setCategory] = useState<CategoryChoice | null>(null);
   const [placePickerOpen, setPlacePickerOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
@@ -70,7 +70,8 @@ export default function CreatePostScreen() {
       caption: body,
       hashtags: hashtags.join(' '),
       location: placeId,
-      categoryId,
+      categoryId: category?.categoryId ?? null,
+      subcategoryId: category?.subcategoryId ?? null,
       attachments,
     });
 
@@ -184,29 +185,15 @@ export default function CreatePostScreen() {
             </View>
           ) : null}
 
-          <Text style={styles.sectionTitle}>{toGreekUpperCase('Κοινότητα (προαιρετικό)')}</Text>
+          <CategoryPicker
+            label="Κοινότητα (προαιρετικό)"
+            placeholder="Διάλεξε κατηγορία"
+            value={category}
+            onChange={setCategory}
+          />
           <Text style={styles.sectionHint}>
-            Διάλεξε μία και η δημοσίευση εμφανίζεται σε όσες την ακολουθούν.
+            Η δημοσίευση εμφανίζεται σε όσες ακολουθούν την κοινότητα.
           </Text>
-          <View style={styles.chipWrap}>
-            {categories.map((category) => {
-              const selected = category.id === categoryId;
-              return (
-                <Pressable
-                  key={category.id}
-                  onPress={() => setCategoryId(selected ? null : category.id)}
-                  style={[styles.chip, selected && styles.chipActive]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                >
-                  <Text style={styles.chipEmoji}>{category.emoji}</Text>
-                  <Text style={[styles.chipLabel, selected && styles.chipLabelActive]}>
-                    {category.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
         </ScrollView>
 
         <View style={styles.toolbar}>
@@ -330,7 +317,7 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontFamily: font.regular,
     color: colors.textMuted,
-    marginBottom: spacing.md,
+    marginTop: spacing.sm,
   },
   placeButton: {
     flexDirection: 'row',
