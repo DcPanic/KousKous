@@ -16,6 +16,7 @@ import { CalendarDays, Info, X } from 'lucide-react-native';
 import { can, colors, radii, shadows, spacing, toGreekUpperCase } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { rewardsLevels } from '@/data/rewards';
+import { createReward } from '@/lib/rewards-repo';
 import { useSession } from '@/state/session';
 import { DateRangeCalendar } from '@/components/date-range-calendar';
 import { PlaceholderScreen } from '@/components/placeholder-screen';
@@ -44,6 +45,8 @@ export default function CreateGiveawayScreen() {
   const [endsAt, setEndsAt] = useState<string | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [membersOnly, setMembersOnly] = useState(true);
+  const [publishing, setPublishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!can(user, 'official_dashboard')) {
     return (
@@ -59,6 +62,32 @@ export default function CreateGiveawayScreen() {
   const costValue = Number(cost.replace(',', '.'));
   const free = !Number.isFinite(costValue) || costValue <= 0;
 
+  const publish = async () => {
+    if (!canPublish || publishing) return;
+
+    setPublishing(true);
+    setError(null);
+
+    const id = await createReward({
+      title: title.trim(),
+      partner: partner.trim(),
+      description: '',
+      costPoints: free ? 0 : Math.round(costValue),
+      minLevel,
+      endsAt,
+      membersOnly,
+    });
+
+    setPublishing(false);
+
+    if (!id) {
+      setError('Το giveaway δεν δημοσιεύτηκε. Δοκίμασε ξανά.');
+      return;
+    }
+
+    router.back();
+  };
+
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
@@ -72,12 +101,12 @@ export default function CreateGiveawayScreen() {
         </Pressable>
         <Text style={styles.headerTitle}>Νέο giveaway</Text>
         <Pressable
-          onPress={() => canPublish && router.back()}
-          disabled={!canPublish}
-          style={[styles.publish, !canPublish && styles.publishDisabled]}
+          onPress={() => void publish()}
+          disabled={!canPublish || publishing}
+          style={[styles.publish, (!canPublish || publishing) && styles.publishDisabled]}
           accessibilityRole="button"
         >
-          <Text style={styles.publishLabel}>Δημοσίευση</Text>
+          <Text style={styles.publishLabel}>{publishing ? 'Δημοσίευση...' : 'Δημοσίευση'}</Text>
         </Pressable>
       </View>
 
@@ -185,6 +214,8 @@ export default function CreateGiveawayScreen() {
               και το δώρο το παρέχει η συνεργάτιδα επιχείρηση.
             </Text>
           </View>
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -195,6 +226,12 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.cream,
+  },
+  error: {
+    fontSize: 11.5,
+    fontFamily: font.bold,
+    color: colors.danger,
+    marginTop: spacing.md,
   },
   flex: {
     flex: 1,

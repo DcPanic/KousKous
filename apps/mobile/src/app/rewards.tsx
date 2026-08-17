@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Check, Gift, Lock, Sparkles, Trophy } from 'lucide-react-native';
 import {
@@ -14,38 +14,83 @@ import {
   toGreekUpperCase,
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
+import { levelFor, rewardsLevels } from '@/data/rewards';
 import {
-  levelFor,
-  memberPoints,
-  pointsHistory,
-  rewards,
-  rewardsLevels,
+  enterReward,
+  fetchMyEntries,
+  fetchPointsHistory,
+  fetchRewards,
+  type PointsEntry,
   type Reward,
-} from '@/data/rewards';
+} from '@/lib/rewards-repo';
+import { fetchMyPoints } from '@/lib/points';
 import { useSession } from '@/state/session';
 import { DiagonalGradient } from '@/components/gradient';
 
+/** Card tints, cycled so a list of giveaways is not one flat colour. */
+const TINTS = ['#F5E6BE', '#FBE1E9', '#EADFF0', '#DCEAF5', '#E4F0E8', '#F0E4D8'];
+
 export default function RewardsScreen() {
   const router = useRouter();
-  const { user } = useSession();
+  const { user, signedIn } = useSession();
   const allowed = can(user, 'rewards');
 
-  // Entries live in this screen for now; the backend owns them once it
-  // exists, and nothing here spends real money (spec §9).
-  const [entered, setEntered] = useState<string[]>(
-    rewards.filter((reward) => reward.status === 'entered').map((reward) => reward.id),
-  );
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [entered, setEntered] = useState<string[]>([]);
+  const [history, setHistory] = useState<PointsEntry[]>([]);
+  const [points, setPoints] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const { current, next } = levelFor(memberPoints);
+  const load = useCallback(async () => {
+    if (!signedIn || !allowed) return;
+
+    setLoading(true);
+
+    try {
+      const [list, mine, balance, log] = await Promise.all([
+        fetchRewards(),
+        fetchMyEntries(user.id),
+        fetchMyPoints(user.id),
+        fetchPointsHistory(user.id),
+      ]);
+
+      setRewards(list);
+      setEntered(mine);
+      setPoints(balance);
+      setHistory(log);
+    } catch {
+      // Keep whatever is on screen.
+    } finally {
+      setLoading(false);
+    }
+  }, [signedIn, allowed, user.id]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const { current, next } = levelFor(points);
   const span = next ? next.threshold - current.threshold : 1;
-  const progress = next
-    ? Math.min(1, (memberPoints - current.threshold) / span)
-    : 1;
+  const progress = next ? Math.min(1, (points - current.threshold) / span) : 1;
 
   const statusOf = (reward: Reward) => {
     if (entered.includes(reward.id)) return 'entered' as const;
-    if (reward.cost > memberPoints) return 'locked' as const;
+    if (reward.cost > points) return 'locked' as const;
     return 'available' as const;
+  };
+
+  const enter = async (reward: Reward) => {
+    setError(null);
+
+    try {
+      await enterReward(reward.id, user.id);
+      await load();
+    } catch {
+      // The trigger refuses an entry she cannot afford, so this is the
+      // honest message rather than a generic failure.
+      setError('Η συμμετοχή δεν καταχωρήθηκε. Ίσως δεν έχεις αρκετούς πόντους.');
+    }
   };
 
   return (
@@ -63,13 +108,19 @@ export default function RewardsScreen() {
       </View>
 
       {allowed ? (
-        <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.body}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.pink} />
+          }
+        >
           <DiagonalGradient colors={gradients.officialCover} style={styles.pointsCard}>
             <View style={styles.pointsTop}>
               <Trophy size={18} color={colors.white} />
               <Text style={styles.levelName}>{current.name}</Text>
             </View>
-            <Text style={styles.pointsValue}>{memberPoints}</Text>
+            <Text style={styles.pointsValue}>{points}</Text>
             <Text style={styles.pointsLabel}>πόντοι</Text>
 
             <View style={styles.track}>
@@ -77,14 +128,14 @@ export default function RewardsScreen() {
             </View>
             <Text style={styles.nextLabel}>
               {next
-                ? `${next.threshold - memberPoints} πόντοι ακόμα για ${next.name}`
+                ? `${next.threshold - points} πόντοι ακόμα για ${next.name}`
                 : 'Έφτασες στο ανώτερο επίπεδο ✨'}
             </Text>
           </DiagonalGradient>
 
           <Text style={styles.sectionTitle}>{toGreekUpperCase('Επίπεδα')}</Text>
           {rewardsLevels.map((level) => {
-            const reached = memberPoints >= level.threshold;
+            const reached = points >= level.threshold;
             return (
               <View key={level.id} style={styles.levelRow}>
                 <View style={[styles.levelDot, reached && styles.levelDotReached]}>
@@ -101,17 +152,21 @@ export default function RewardsScreen() {
           })}
 
           <Text style={styles.sectionTitle}>{toGreekUpperCase('Δώρα & Προσφορές')}</Text>
-          {rewards.map((reward) => {
+          {rewards.map((reward, index) => {
             const status = statusOf(reward);
             return (
               <View key={reward.id} style={styles.rewardCard}>
-                <View style={[styles.rewardArt, { backgroundColor: reward.tint }]}>
+                <View style={[styles.rewardArt, { backgroundColor: TINTS[index % TINTS.length] }]}>
                   <Gift size={20} color={colors.aubergine} />
                 </View>
                 <View style={styles.rewardText}>
                   <Text style={styles.rewardTitle}>{reward.title}</Text>
                   <Text style={styles.rewardPartner}>{reward.partner}</Text>
-                  <Text style={styles.rewardEnds}>{reward.ends}</Text>
+                  <Text style={styles.rewardEnds}>
+                    {[reward.ends, reward.entryCount > 0 ? `${reward.entryCount} συμμετοχές` : null]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Text>
                 </View>
                 <View style={styles.rewardAction}>
                   <Text style={styles.rewardCost}>
@@ -129,7 +184,7 @@ export default function RewardsScreen() {
                     </View>
                   ) : (
                     <Pressable
-                      onPress={() => setEntered((prev) => [...prev, reward.id])}
+                      onPress={() => void enter(reward)}
                       style={styles.enterButton}
                       accessibilityRole="button"
                       accessibilityLabel={`Δήλωσε συμμετοχή: ${reward.title}`}
@@ -142,16 +197,32 @@ export default function RewardsScreen() {
             );
           })}
 
+          {rewards.length === 0 && !loading ? (
+            <Text style={styles.empty}>
+              Κανένα δώρο αυτή τη στιγμή. Θα σε ειδοποιήσουμε μόλις ανοίξει το επόμενο.
+            </Text>
+          ) : null}
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+
           <Text style={styles.sectionTitle}>{toGreekUpperCase('Πώς κέρδισες πόντους')}</Text>
-          {pointsHistory.map((entry) => (
+          {history.map((entry) => (
             <View key={entry.id} style={styles.historyRow}>
               <View style={styles.historyText}>
                 <Text style={styles.historyLabel}>{entry.label}</Text>
                 <Text style={styles.historyTime}>{entry.timeAgo}</Text>
               </View>
-              <Text style={styles.historyPoints}>+{entry.points}</Text>
+              <Text style={[styles.historyPoints, entry.points < 0 && styles.historySpent]}>
+                {entry.points > 0 ? `+${entry.points}` : entry.points}
+              </Text>
             </View>
           ))}
+
+          {history.length === 0 && !loading ? (
+            <Text style={styles.empty}>
+              Δεν έχεις πόντους ακόμα. Κέρδισε γράφοντας, απαντώντας και ερχόμενη σε events.
+            </Text>
+          ) : null}
         </ScrollView>
       ) : (
         <View style={styles.locked}>
@@ -180,6 +251,25 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.cream,
+  },
+  empty: {
+    fontSize: 12.5,
+    fontFamily: font.regular,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 19,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+  },
+  error: {
+    fontSize: 11.5,
+    fontFamily: font.bold,
+    color: colors.danger,
+    lineHeight: 17,
+    marginTop: spacing.sm,
+  },
+  historySpent: {
+    color: colors.textMuted,
   },
   header: {
     flexDirection: 'row',

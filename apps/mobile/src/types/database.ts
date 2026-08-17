@@ -296,12 +296,33 @@ export type RewardRow = {
   id: string;
   title: string;
   partner: string;
+  description: string;
   cost_points: number;
   min_level: string;
   ends_at: string | null;
   members_only: boolean;
   created_at: string;
 }
+
+export type RewardEntryRow = {
+  reward_id: string;
+  profile_id: string;
+  created_at: string;
+};
+
+export type PointEntryRow = {
+  id: string;
+  profile_id: string;
+  label: string;
+  points: number;
+  created_at: string;
+};
+
+/** The `reward_stats` view: how many entered, never who. */
+export type RewardStatsRow = {
+  reward_id: string;
+  entry_count: number;
+};
 
 /** Insert shapes: server-defaulted columns are optional. */
 type Insertable<T, Optional extends keyof T> = Omit<T, Optional> & Partial<Pick<T, Optional>>;
@@ -348,7 +369,12 @@ export interface Database {
       conversations: Table<ConversationRow, 'id' | 'created_at'>;
       conversation_members: Table<ConversationMemberRow, 'last_read_at'>;
       messages: Table<MessageRow, 'id' | 'created_at' | 'body' | 'media_path'>;
-      rewards: Table<RewardRow, 'id' | 'created_at'>;
+      rewards: Table<
+        RewardRow,
+        'id' | 'created_at' | 'description' | 'cost_points' | 'min_level' | 'ends_at' | 'members_only'
+      >;
+      reward_entries: Table<RewardEntryRow, 'created_at'>;
+      point_entries: Table<PointEntryRow, 'id' | 'created_at'>;
       post_media: Table<PostMediaRow, 'id' | 'position'>;
       post_likes: Table<PostLikeRow, 'created_at'>;
       post_saves: Table<PostSaveRow, 'created_at'>;
@@ -368,6 +394,7 @@ export interface Database {
     Views: {
       events_public: { Row: EventPublicRow; Relationships: [] };
       forum_stats: { Row: ForumStatsRow; Relationships: [] };
+      reward_stats: { Row: RewardStatsRow; Relationships: [] };
     };
     // The canonical "empty" form used by Supabase's own generated types.
     // Record<string, never> is not assignable to the library's generic
