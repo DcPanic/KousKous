@@ -10,7 +10,6 @@ import {
 } from 'react';
 import { emptyDateRange, hasDateRange, type DateRange, type PriceBand } from '@kouskous/shared';
 import type { ForumReply, ForumThread } from '@/data/forum';
-import { notifications } from '@/data/notifications';
 import { fetchMyReactions, setLike, setSaved } from '@/lib/posts-repo';
 import { usePersistedStringList } from '@/lib/use-persisted-list';
 import { useSession } from '@/state/session';
@@ -72,14 +71,6 @@ interface AppStateValue {
   isPostSaved: (postId: string) => boolean;
   toggleSavedPost: (postId: string) => void;
 
-  /** Messages sent in this session, per conversation. */
-
-  /** Notifications she has already seen, and the resulting badge count. */
-  readNotificationIds: string[];
-  unreadNotificationCount: number;
-  markNotificationRead: (id: string) => void;
-  markAllNotificationsRead: () => void;
-
 }
 
 const AppStateContext = createContext<AppStateValue | null>(null);
@@ -102,7 +93,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [savedPostIds, setSavedPostIds] = usePersistedStringList('savedPosts');
   const [blockedNames, setBlockedNames] = usePersistedStringList('blockedNames');
   const [reportedPostIds, setReportedPostIds] = usePersistedStringList('reportedPosts');
-  const [readNotificationIds, setReadNotificationIds] = usePersistedStringList('readNotifications');
 
   const openDrawer = useCallback(() => setDrawerOpen(true), []);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
@@ -207,18 +197,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     };
   }, [signedIn, user.id, setLikedPostIds, setSavedPostIds]);
 
-  const markNotificationRead = useCallback((id: string) => {
-    setReadNotificationIds((prev) => (prev.includes(id) ? prev : [id, ...prev]));
-  }, [setReadNotificationIds]);
-
-  const markAllNotificationsRead = useCallback(() => {
-    setReadNotificationIds(notifications.map((notification) => notification.id));
-  }, [setReadNotificationIds]);
-
-  const unreadNotificationCount = notifications.filter(
-    (notification) => !notification.read && !readNotificationIds.includes(notification.id),
-  ).length;
-
   const value = useMemo<AppStateValue>(
     () => ({
       drawerOpen,
@@ -250,10 +228,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       savedPostIds,
       isPostSaved: (postId: string) => savedPostIds.includes(postId),
       toggleSavedPost,
-      readNotificationIds,
-      unreadNotificationCount,
-      markNotificationRead,
-      markAllNotificationsRead,
     }),
     [
       drawerOpen,
@@ -278,10 +252,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toggleLike,
       savedPostIds,
       toggleSavedPost,
-      readNotificationIds,
-      unreadNotificationCount,
-      markNotificationRead,
-      markAllNotificationsRead,
     ],
   );
 

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, BadgeCheck, Search, UserPlus } from 'lucide-react-native';
 import { colors, findPlace, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { people } from '@/data/people';
+import { useSocial } from '@/state/social';
+import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
 
 type FriendsTab = 'following' | 'followers' | 'suggested';
@@ -16,32 +17,28 @@ const TABS: [FriendsTab, string][] = [
   ['suggested', 'Προτάσεις'],
 ];
 
-/**
- * Her people. Until the backend has a follow graph the three tabs are
- * carved out of the seeded directory, so each one is genuinely different
- * rather than the same list three times.
- */
-const FOLLOWING_IDS = ['eleni-k', 'maria-p', 'natasa-ioannou'];
-const FOLLOWER_IDS = ['eleni-k', 'anna-maria', 'christina-a', 'rafaela-k'];
-
+/** Her people, from the follow graph. */
 export default function FriendsScreen() {
   const router = useRouter();
+  const { signedIn } = useSession();
+  const {
+    following,
+    followers,
+    suggested,
+    loading,
+    refresh,
+    isFollowing,
+    toggleFollowing,
+  } = useSocial();
   const [tab, setTab] = useState<FriendsTab>('following');
-  const [following, setFollowing] = useState<string[]>(FOLLOWING_IDS);
 
   const listFor = (which: FriendsTab) => {
-    if (which === 'following') return people.filter((person) => following.includes(person.id));
-    if (which === 'followers') return people.filter((person) => FOLLOWER_IDS.includes(person.id));
-    return people.filter((person) => !following.includes(person.id));
+    if (which === 'following') return following;
+    if (which === 'followers') return followers;
+    return suggested;
   };
 
   const list = listFor(tab);
-
-  const toggle = (id: string) => {
-    setFollowing((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [id, ...prev],
-    );
-  };
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -84,9 +81,15 @@ export default function FriendsScreen() {
         })}
       </View>
 
-      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={colors.pink} />
+        }
+      >
         {list.map((person) => {
-          const isFollowing = following.includes(person.id);
+          const followed = isFollowing(person.id);
           return (
             <View key={person.id} style={styles.row}>
               <Pressable
@@ -95,7 +98,7 @@ export default function FriendsScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`Προφίλ: ${person.name}`}
               >
-                <Avatar size={44} />
+                <Avatar size={44} uri={person.avatarUrl ?? undefined} />
                 <View style={styles.rowText}>
                   <View style={styles.nameRow}>
                     <Text style={styles.name} numberOfLines={1}>
@@ -106,32 +109,38 @@ export default function FriendsScreen() {
                     ) : null}
                   </View>
                   <Text style={styles.meta} numberOfLines={1}>
-                    {findPlace(person.location)?.name} · {person.followers} followers
+                    {[person.location ? findPlace(person.location)?.name : null, person.bio]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </Text>
                 </View>
               </Pressable>
 
               <Pressable
-                onPress={() => toggle(person.id)}
-                style={[styles.follow, isFollowing && styles.followActive]}
+                onPress={() => toggleFollowing(person.id)}
+                style={[styles.follow, followed && styles.followActive]}
                 accessibilityRole="button"
-                accessibilityState={{ selected: isFollowing }}
-                accessibilityLabel={`${isFollowing ? 'Κατάργηση' : 'Ακολούθησε'} ${person.name}`}
+                accessibilityState={{ selected: followed }}
+                accessibilityLabel={`${followed ? 'Κατάργηση' : 'Ακολούθησε'} ${person.name}`}
               >
-                {!isFollowing ? <UserPlus size={13} color={colors.white} /> : null}
-                <Text style={[styles.followLabel, isFollowing && styles.followLabelActive]}>
-                  {isFollowing ? 'Ακολουθείς' : 'Ακολούθησε'}
+                {!followed ? <UserPlus size={13} color={colors.white} /> : null}
+                <Text style={[styles.followLabel, followed && styles.followLabelActive]}>
+                  {followed ? 'Ακολουθείς' : 'Ακολούθησε'}
                 </Text>
               </Pressable>
             </View>
           );
         })}
 
-        {list.length === 0 ? (
+        {list.length === 0 && !loading ? (
           <Text style={styles.empty}>
-            {tab === 'following'
-              ? 'Δεν ακολουθείς καμία ακόμα. Δες τις προτάσεις.'
-              : 'Τίποτα εδώ ακόμα.'}
+            {!signedIn
+              ? 'Κάνε σύνδεση για να δεις τις φίλες σου.'
+              : tab === 'following'
+                ? 'Δεν ακολουθείς καμία ακόμα. Δες τις προτάσεις.'
+                : tab === 'followers'
+                  ? 'Δεν σε ακολουθεί καμία ακόμα.'
+                  : 'Καμία πρόταση αυτή τη στιγμή.'}
           </Text>
         ) : null}
       </ScrollView>

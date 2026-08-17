@@ -32,8 +32,10 @@ import {
 import { font } from '@/theme/typography';
 import { findPerson } from '@/data/people';
 import { fetchPostCount, fetchProfile, type PublicProfile } from '@/lib/profiles-repo';
+import { fetchFollowCounts } from '@/lib/social-repo';
 import { useChat } from '@/state/chat';
 import { useFeed } from '@/state/feed';
+import { useSocial } from '@/state/social';
 import { Avatar } from '@/components/avatar';
 import { PlaceholderScreen } from '@/components/placeholder-screen';
 
@@ -45,11 +47,12 @@ export default function PersonScreen() {
   const router = useRouter();
   const { openWith } = useChat();
   const { posts } = useFeed();
+  const { isFollowing, toggleFollowing } = useSocial();
   const { width } = useWindowDimensions();
 
-  const [following, setFollowing] = useState(false);
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [postCount, setPostCount] = useState(0);
+  const [counts, setCounts] = useState({ followers: 0, following: 0 });
   const [loaded, setLoaded] = useState(false);
   const [opening, setOpening] = useState(false);
 
@@ -63,13 +66,15 @@ export default function PersonScreen() {
       return;
     }
 
-    const [found, count] = await Promise.all([
+    const [found, count, follow] = await Promise.all([
       fetchProfile(profileId),
       fetchPostCount(profileId),
+      fetchFollowCounts(profileId),
     ]);
 
     setProfile(found);
     setPostCount(count);
+    setCounts(follow);
     setLoaded(true);
   }, [profileId, seeded]);
 
@@ -98,10 +103,8 @@ export default function PersonScreen() {
       ? {
           ...profile,
           posts: postCount,
-          // Following is not stored yet, so the profile leaves the two
-          // counts out rather than inventing them.
-          followers: '—',
-          following: '—',
+          followers: String(counts.followers),
+          following: String(counts.following),
           interests: [] as string[],
           grid: [] as string[],
         }
@@ -125,6 +128,7 @@ export default function PersonScreen() {
     );
   }
 
+  const followed = isFollowing(person.id);
   const tileSize = (width - GRID_GAP * (GRID_COLUMNS + 1)) / GRID_COLUMNS;
   const place = person.location ? findPlace(person.location) : undefined;
   const herPosts = posts.filter((post) => post.authorId === person.id);
@@ -199,14 +203,15 @@ export default function PersonScreen() {
 
         <View style={styles.actions}>
           <Pressable
-            onPress={() => setFollowing((value) => !value)}
-            style={[styles.follow, following && styles.followActive]}
+            onPress={() => toggleFollowing(person.id)}
+            disabled={Boolean(seeded)}
+            style={[styles.follow, followed && styles.followActive]}
             accessibilityRole="button"
-            accessibilityState={{ selected: following }}
+            accessibilityState={{ selected: followed }}
           >
-            {!following ? <UserPlus size={15} color={colors.white} /> : null}
-            <Text style={[styles.followLabel, following && styles.followLabelActive]}>
-              {following ? 'Ακολουθείς' : 'Ακολούθησε'}
+            {!followed ? <UserPlus size={15} color={colors.white} /> : null}
+            <Text style={[styles.followLabel, followed && styles.followLabelActive]}>
+              {followed ? 'Ακολουθείς' : 'Ακολούθησε'}
             </Text>
           </Pressable>
           <Pressable

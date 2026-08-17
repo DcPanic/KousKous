@@ -253,6 +253,24 @@ export type OrderItemRow = {
   unit_price_cents: number;
 };
 
+export type FollowRow = {
+  follower_id: string;
+  followee_id: string;
+  created_at: string;
+};
+
+export type NotificationRow = {
+  id: string;
+  profile_id: string;
+  kind: 'reply' | 'like' | 'follow' | 'event' | 'order' | 'system';
+  actor_id: string | null;
+  target_kind: 'thread' | 'event' | 'post' | 'chat' | 'community' | 'shop' | null;
+  target_id: string | null;
+  detail: string;
+  read_at: string | null;
+  created_at: string;
+};
+
 export type ConversationRow = {
   id: string;
   created_at: string;
@@ -321,6 +339,11 @@ export interface Database {
         | 'category_id'
         | 'subcategory_id'
         | 'price_cents'
+      >;
+      follows: Table<FollowRow, 'created_at'>;
+      notifications: Table<
+        NotificationRow,
+        'id' | 'created_at' | 'detail' | 'read_at' | 'actor_id' | 'target_kind' | 'target_id'
       >;
       conversations: Table<ConversationRow, 'id' | 'created_at'>;
       conversation_members: Table<ConversationMemberRow, 'last_read_at'>;

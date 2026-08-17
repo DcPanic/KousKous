@@ -5,10 +5,12 @@ import { colors, fontSizes, radii, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { useAppState } from '@/state/app-state';
 import { useChat } from '@/state/chat';
+import { useSocial } from '@/state/social';
 
 export function AppHeader() {
-  const { openDrawer, unreadNotificationCount } = useAppState();
+  const { openDrawer } = useAppState();
   const { unreadCount: unreadMessageCount } = useChat();
+  const { unreadNotificationCount } = useSocial();
   const router = useRouter();
 
   return (

@@ -1,19 +1,21 @@
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
   CalendarHeart,
   Heart,
   MessageCircle,
+  ShoppingBag,
   Sparkles,
   UserPlus,
-  Users,
 } from 'lucide-react-native';
 import { colors, radii, shadows, spacing, toGreekUpperCase } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { notifications, type AppNotification, type NotificationKind } from '@/data/notifications';
-import { useAppState } from '@/state/app-state';
+import { relativeTime } from '@/lib/relative-time';
+import type { AppNotification, NotificationKind } from '@/lib/social-repo';
+import { useSession } from '@/state/session';
+import { useSocial } from '@/state/social';
 import { Avatar } from '@/components/avatar';
 
 /** Icon and tint per kind, so the list is scannable without reading it. */
@@ -22,7 +24,7 @@ const ICONS: Record<NotificationKind, { Icon: typeof Heart; tint: string }> = {
   like: { Icon: Heart, tint: colors.pink },
   follow: { Icon: UserPlus, tint: colors.hostPurple },
   event: { Icon: CalendarHeart, tint: colors.gold },
-  community: { Icon: Users, tint: colors.hostPurple },
+  order: { Icon: ShoppingBag, tint: colors.hostPurple },
   system: { Icon: Sparkles, tint: colors.gold },
 };
 
@@ -30,29 +32,29 @@ const ICONS: Record<NotificationKind, { Icon: typeof Heart; tint: string }> = {
  * Two buckets only. Anything older than a day reads as history, and a
  * flat list of timestamps is harder to scan than a single divider.
  */
-const RECENT_LABELS = ['λεπτά', 'ώρα', 'ώρες'];
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 function isRecent(notification: AppNotification): boolean {
-  return RECENT_LABELS.some((label) => notification.timeAgo.includes(label));
+  return Date.now() - new Date(notification.createdAt).getTime() < ONE_DAY_MS;
 }
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const { signedIn } = useSession();
   const {
-    readNotificationIds,
+    notifications,
     unreadNotificationCount,
-    markNotificationRead,
-    markAllNotificationsRead,
-  } = useAppState();
+    markRead,
+    markAllRead,
+    loading,
+    refresh,
+  } = useSocial();
 
   const recent = notifications.filter(isRecent);
   const earlier = notifications.filter((notification) => !isRecent(notification));
 
-  const isUnread = (notification: AppNotification) =>
-    !notification.read && !readNotificationIds.includes(notification.id);
-
   const open = (notification: AppNotification) => {
-    markNotificationRead(notification.id);
+    markRead(notification.id);
 
     const target = notification.target;
     if (!target) return;
@@ -63,6 +65,10 @@ export default function NotificationsScreen() {
       router.push({ pathname: '/event/[id]', params: { id: target.id } });
     } else if (target.screen === 'community') {
       router.push({ pathname: '/community/[id]', params: { id: target.id } });
+    } else if (target.screen === 'post') {
+      router.push({ pathname: '/post/[id]', params: { id: target.id } });
+    } else if (target.screen === 'shop') {
+      router.push({ pathname: '/shop/[id]', params: { id: target.id } });
     } else {
       router.push({ pathname: '/chat/[id]', params: { id: target.id } });
     }
@@ -76,7 +82,7 @@ export default function NotificationsScreen() {
         <Text style={styles.groupLabel}>{toGreekUpperCase(label)}</Text>
         {items.map((notification) => {
           const { Icon, tint } = ICONS[notification.kind];
-          const unread = isUnread(notification);
+          const unread = !notification.read;
 
           return (
             <Pressable
@@ -88,7 +94,7 @@ export default function NotificationsScreen() {
             >
               <View>
                 {notification.actor ? (
-                  <Avatar size={40} />
+                  <Avatar size={40} uri={notification.actorAvatarUrl ?? undefined} />
                 ) : (
                   <View style={[styles.systemAvatar, { backgroundColor: `${tint}22` }]}>
                     <Icon size={18} color={tint} />
@@ -108,7 +114,7 @@ export default function NotificationsScreen() {
                   ) : null}
                   {notification.body}
                 </Text>
-                <Text style={styles.time}>{notification.timeAgo}</Text>
+                <Text style={styles.time}>{relativeTime(notification.createdAt)}</Text>
               </View>
 
               {unread ? <View style={styles.unreadDot} /> : null}
@@ -133,7 +139,7 @@ export default function NotificationsScreen() {
         <Text style={styles.headerTitle}>Ειδοποιήσεις</Text>
         {unreadNotificationCount > 0 ? (
           <Pressable
-            onPress={markAllNotificationsRead}
+            onPress={markAllRead}
             style={styles.markAll}
             accessibilityRole="button"
           >
@@ -142,9 +148,23 @@ export default function NotificationsScreen() {
         ) : null}
       </View>
 
-      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={colors.pink} />
+        }
+      >
         {renderGroup('Νέα', recent)}
         {renderGroup('Παλαιότερα', earlier)}
+
+        {notifications.length === 0 && !loading ? (
+          <Text style={styles.empty}>
+            {signedIn
+              ? 'Καμία ειδοποίηση ακόμα. Θα σε ειδοποιήσουμε όταν κάτι συμβεί.'
+              : 'Κάνε σύνδεση για να δεις τις ειδοποιήσεις σου.'}
+          </Text>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -154,6 +174,15 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.cream,
+  },
+  empty: {
+    fontSize: 12.5,
+    fontFamily: font.regular,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 19,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xxl,
   },
   header: {
     flexDirection: 'row',

@@ -16,6 +16,7 @@ import { StyleSheet, View } from 'react-native';
 import { colors } from '@kouskous/shared';
 import { AppStateProvider } from '@/state/app-state';
 import { ChatProvider } from '@/state/chat';
+import { SocialProvider } from '@/state/social';
 import { EventsProvider } from '@/state/events';
 import { ForumsProvider } from '@/state/forums';
 import { FeedProvider } from '@/state/feed';
@@ -54,6 +55,7 @@ export default function RootLayout() {
           <EventsProvider>
           <ForumsProvider>
           <ChatProvider>
+          <SocialProvider>
           <View style={styles.root}>
             <StatusBar style="dark" />
             <Stack
@@ -68,6 +70,7 @@ export default function RootLayout() {
             {/* Sits above the navigator so it can cover the tab bar. */}
             <DrawerMenu />
           </View>
+          </SocialProvider>
           </ChatProvider>
           </ForumsProvider>
           </EventsProvider>
