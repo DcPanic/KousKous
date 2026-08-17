@@ -13,16 +13,13 @@ import { StoryRow } from '@/components/story-row';
 
 export default function FeedScreen() {
   const [tab, setTab] = useState<FeedTab>('foryou');
-  const { selectedPlaces, followedCategories, blockedNames } = useAppState();
+  const { selectedPlaces, followedCategories } = useAppState();
   const { posts, loading, error, refresh, loadMore } = useFeed();
 
   const visiblePosts = useMemo(() => {
-    // Blocking a woman means not seeing her, so it runs before anything
-    // else and applies on every tab.
-    const inPlace = posts.filter(
-      (post) =>
-        !blockedNames.includes(post.author) && matchesPlaces(post.location, selectedPlaces),
-    );
+    // Blocked authors never arrive: `posts_select` filters them in the
+    // database, so there is nothing left to filter here.
+    const inPlace = posts.filter((post) => matchesPlaces(post.location, selectedPlaces));
 
     // "Ακολουθείτε" narrows to the communities she follows; "Trending"
     // reorders by reactions rather than filtering, so nothing disappears.
@@ -35,7 +32,7 @@ export default function FeedScreen() {
       return [...inPlace].sort((a, b) => b.likes - a.likes);
     }
     return inPlace;
-  }, [blockedNames, posts, followedCategories, selectedPlaces, tab]);
+  }, [posts, followedCategories, selectedPlaces, tab]);
 
   // A FlatList only builds the rows on screen. The previous ScrollView
   // laid out every post at once, which is what made a long feed slow to

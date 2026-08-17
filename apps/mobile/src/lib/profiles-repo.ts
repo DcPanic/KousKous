@@ -77,3 +77,25 @@ export async function fetchPostCount(profileId: string): Promise<number> {
 
   return count ?? 0;
 }
+
+/**
+ * The two privacy switches that change what other women can see.
+ *
+ * `show_location` hides her city from her profile; `discoverable` keeps
+ * her out of the suggestion lists without hiding her from anyone who
+ * already follows or messages her.
+ */
+export async function setPrivacy(
+  profileId: string,
+  next: { showLocation?: boolean; discoverable?: boolean },
+): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      ...(next.showLocation !== undefined ? { show_location: next.showLocation } : {}),
+      ...(next.discoverable !== undefined ? { discoverable: next.discoverable } : {}),
+    })
+    .eq('id', profileId);
+
+  if (error) throw error;
+}

@@ -56,13 +56,6 @@ interface AppStateValue {
   isFollowing: (categoryId: string) => boolean;
   toggleFollow: (categoryId: string) => void;
 
-  /** Women she blocked and posts she reported, by author name. */
-  blockedNames: string[];
-  isBlocked: (name: string) => boolean;
-  toggleBlocked: (name: string) => void;
-  reportedPostIds: string[];
-  reportPost: (postId: string) => void;
-
   /** Posts she liked, and posts she bookmarked. */
   likedPostIds: string[];
   hasLiked: (postId: string) => boolean;
@@ -91,8 +84,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
   const [likedPostIds, setLikedPostIds] = usePersistedStringList('likedPosts');
   const [savedPostIds, setSavedPostIds] = usePersistedStringList('savedPosts');
-  const [blockedNames, setBlockedNames] = usePersistedStringList('blockedNames');
-  const [reportedPostIds, setReportedPostIds] = usePersistedStringList('reportedPosts');
 
   const openDrawer = useCallback(() => setDrawerOpen(true), []);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
@@ -140,16 +131,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         ? prev.filter((item) => item !== categoryId)
         : [...prev, categoryId],
     );
-  }, []);
-
-  const toggleBlocked = useCallback((name: string) => {
-    setBlockedNames((prev) =>
-      prev.includes(name) ? prev.filter((item) => item !== name) : [name, ...prev],
-    );
-  }, []);
-
-  const reportPost = useCallback((postId: string) => {
-    setReportedPostIds((prev) => (prev.includes(postId) ? prev : [postId, ...prev]));
   }, []);
 
   // The list updates immediately and the write follows; a failed write
@@ -217,11 +198,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       followedCategories,
       isFollowing: (categoryId: string) => followedCategories.includes(categoryId),
       toggleFollow,
-      blockedNames,
-      isBlocked: (name: string) => blockedNames.includes(name),
-      toggleBlocked,
-      reportedPostIds,
-      reportPost,
       likedPostIds,
       hasLiked: (postId: string) => likedPostIds.includes(postId),
       toggleLike,
@@ -244,10 +220,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       clearFilters,
       followedCategories,
       toggleFollow,
-      blockedNames,
-      toggleBlocked,
-      reportedPostIds,
-      reportPost,
       likedPostIds,
       toggleLike,
       savedPostIds,

@@ -42,6 +42,11 @@ export interface User {
   /** Ordinary blue-style verification, unrelated to `is_official`. */
   is_verified: boolean;
 
+  /** Whether her city is shown on her profile to other women. */
+  show_location: boolean;
+  /** Whether she appears in suggestion lists. Never hides her profile. */
+  discoverable: boolean;
+
   created_at: string;
 }
 

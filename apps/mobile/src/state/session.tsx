@@ -38,6 +38,8 @@ const baseUser: User = {
   payment_provider_account_id: null,
   is_official: false,
   is_verified: false,
+  show_location: true,
+  discoverable: true,
   created_at: '2026-01-14T10:00:00Z',
 };
 
@@ -82,6 +84,8 @@ function toUser(profile: ProfileRow, email: string | undefined): User {
     payment_provider_account_id: profile.payment_provider_account_id,
     is_official: profile.is_official,
     is_verified: profile.is_verified,
+    show_location: profile.show_location,
+    discoverable: profile.discoverable,
     created_at: profile.created_at,
   };
 }

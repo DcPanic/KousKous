@@ -4,12 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, ShieldCheck } from 'lucide-react-native';
 import { colors, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { useAppState } from '@/state/app-state';
+import { useModeration } from '@/state/moderation';
 import { Avatar } from '@/components/avatar';
 
 export default function BlockedScreen() {
   const router = useRouter();
-  const { blockedNames, toggleBlocked } = useAppState();
+  const { blocked, toggleBlocked } = useModeration();
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -26,22 +26,22 @@ export default function BlockedScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-        {blockedNames.length > 0 ? (
+        {blocked.length > 0 ? (
           <>
             <Text style={styles.intro}>
               Δεν βλέπεις τις δημοσιεύσεις τους και δεν μπορούν να σου στείλουν μήνυμα.
             </Text>
-            {blockedNames.map((name) => (
-              <View key={name} style={styles.row}>
-                <Avatar size={40} />
+            {blocked.map((person) => (
+              <View key={person.id} style={styles.row}>
+                <Avatar size={40} uri={person.avatarUrl ?? undefined} />
                 <Text style={styles.name} numberOfLines={1}>
-                  {name}
+                  {person.name}
                 </Text>
                 <Pressable
-                  onPress={() => toggleBlocked(name)}
+                  onPress={() => void toggleBlocked(person.id)}
                   style={styles.unblock}
                   accessibilityRole="button"
-                  accessibilityLabel={`Άρση αποκλεισμού ${name}`}
+                  accessibilityLabel={`Άρση αποκλεισμού ${person.name}`}
                 >
                   <Text style={styles.unblockLabel}>Άρση</Text>
                 </Pressable>

@@ -186,6 +186,7 @@ export function PostCard({ post, openable = true }: PostCardProps) {
         visible={optionsOpen}
         onClose={() => setOptionsOpen(false)}
         postId={post.id}
+        authorId={post.authorId ?? ''}
         author={post.author}
       />
     </View>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,7 +31,8 @@ import {
   toGreekUpperCase,
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { useAppState } from '@/state/app-state';
+import { setPrivacy } from '@/lib/profiles-repo';
+import { useModeration } from '@/state/moderation';
 import { useSession } from '@/state/session';
 import { ConfirmSheet } from '@/components/confirm-sheet';
 import { LanguageSheet } from '@/components/language-sheet';
@@ -47,18 +48,42 @@ const MONTHLY_PRICE = `€${PAID_MEMBER_PRICE_EUR.toFixed(2).replace('.', ',')}/
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user, signedIn, signOut } = useSession();
-  const { blockedNames } = useAppState();
+  const { user, signedIn, signOut, refreshProfile } = useSession();
+  const { blocked } = useModeration();
   const tier = accountTier(user);
 
-  // Preferences are local until the backend stores them; the switches are
-  // real so the screen behaves the way it will when it is wired up.
+  // Push and email are still local: nothing sends either yet, so storing
+  // the preference would be storing a promise the app cannot keep.
   const [pushEvents, setPushEvents] = useState(true);
   const [pushForums, setPushForums] = useState(true);
   const [pushMessages, setPushMessages] = useState(true);
   const [emailDigest, setEmailDigest] = useState(false);
-  const [showLocation, setShowLocation] = useState(true);
-  const [discoverable, setDiscoverable] = useState(true);
+
+  // These two are real: they change what other women can see, so they are
+  // read from the account and written back to it.
+  const [showLocation, setShowLocation] = useState(user.show_location ?? true);
+  const [discoverable, setDiscoverable] = useState(user.discoverable ?? true);
+
+  useEffect(() => {
+    setShowLocation(user.show_location ?? true);
+    setDiscoverable(user.discoverable ?? true);
+  }, [user.show_location, user.discoverable]);
+
+  const savePrivacy = (next: { showLocation?: boolean; discoverable?: boolean }) => {
+    if (next.showLocation !== undefined) setShowLocation(next.showLocation);
+    if (next.discoverable !== undefined) setDiscoverable(next.discoverable);
+
+    if (!signedIn) return;
+
+    void setPrivacy(user.id, next)
+      .then(() => refreshProfile())
+      .catch(() => {
+        // Put the switch back rather than leaving it claiming something
+        // the account does not actually say.
+        if (next.showLocation !== undefined) setShowLocation(!next.showLocation);
+        if (next.discoverable !== undefined) setDiscoverable(!next.discoverable);
+      });
+  };
   const [languageOpen, setLanguageOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -138,12 +163,22 @@ export default function SettingsScreen() {
         <ToggleRow icon={Mail} label="Εβδομαδιαίο email" value={emailDigest} onChange={setEmailDigest} />
 
         <Section label="Ιδιωτικότητα & ασφάλεια" />
-        <ToggleRow icon={MapPin} label="Εμφάνιση περιοχής στο προφίλ" value={showLocation} onChange={setShowLocation} />
-        <ToggleRow icon={Eye} label="Να με βρίσκουν στην αναζήτηση" value={discoverable} onChange={setDiscoverable} />
+        <ToggleRow
+          icon={MapPin}
+          label="Εμφάνιση περιοχής στο προφίλ"
+          value={showLocation}
+          onChange={(value) => savePrivacy({ showLocation: value })}
+        />
+        <ToggleRow
+          icon={Eye}
+          label="Να με βρίσκουν στην αναζήτηση"
+          value={discoverable}
+          onChange={(value) => savePrivacy({ discoverable: value })}
+        />
         <Row
           icon={ShieldCheck}
           label="Αποκλεισμένες χρήστριες"
-          value={String(blockedNames.length)}
+          value={String(blocked.length)}
           onPress={() => router.push('/blocked')}
         />
         <Text style={styles.note}>

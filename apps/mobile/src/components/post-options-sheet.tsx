@@ -4,7 +4,7 @@ import { ArrowLeft, Ban, Check, Flag, Link2, UserMinus } from 'lucide-react-nati
 import { colors, radii, spacing, toGreekUpperCase } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { linkTo, shareLink } from '@/lib/share';
-import { useAppState } from '@/state/app-state';
+import { useModeration } from '@/state/moderation';
 
 /** The reasons moderation actually needs to triage a report. */
 const REPORT_REASONS = [
@@ -20,6 +20,8 @@ interface PostOptionsSheetProps {
   visible: boolean;
   onClose: () => void;
   postId: string;
+  /** The author's account, which is what a block is keyed by. */
+  authorId: string;
   author: string;
 }
 
@@ -29,13 +31,19 @@ interface PostOptionsSheetProps {
  * Reporting is two steps on purpose — a single tap that silently files a
  * report is easy to hit by accident and tells the reporter nothing.
  */
-export function PostOptionsSheet({ visible, onClose, postId, author }: PostOptionsSheetProps) {
-  const { isBlocked, toggleBlocked, reportPost, reportedPostIds } = useAppState();
+export function PostOptionsSheet({
+  visible,
+  onClose,
+  postId,
+  authorId,
+  author,
+}: PostOptionsSheetProps) {
+  const { isBlocked, toggleBlocked, report, reportedPostIds } = useModeration();
 
-  const [step, setStep] = useState<'menu' | 'reasons' | 'done'>('menu');
+  const [step, setStep] = useState<'menu' | 'reasons' | 'done' | 'failed'>('menu');
   const [copied, setCopied] = useState(false);
 
-  const blocked = isBlocked(author);
+  const blocked = isBlocked(authorId);
   const alreadyReported = reportedPostIds.includes(postId);
 
   const close = () => {
@@ -44,9 +52,9 @@ export function PostOptionsSheet({ visible, onClose, postId, author }: PostOptio
     onClose();
   };
 
-  const submitReport = () => {
-    reportPost(postId);
-    setStep('done');
+  const submitReport = async (reason: string) => {
+    const ok = await report(reason, { postId, profileId: authorId });
+    setStep(ok ? 'done' : 'failed');
   };
 
   return (
@@ -77,8 +85,9 @@ export function PostOptionsSheet({ visible, onClose, postId, author }: PostOptio
               icon={blocked ? UserMinus : Ban}
               label={blocked ? `Άρση αποκλεισμού ${author}` : `Αποκλεισμός ${author}`}
               tone="danger"
+              disabled={!authorId}
               onPress={() => {
-                toggleBlocked(author);
+                void toggleBlocked(authorId);
                 close();
               }}
             />
@@ -102,7 +111,7 @@ export function PostOptionsSheet({ visible, onClose, postId, author }: PostOptio
             {REPORT_REASONS.map((reason) => (
               <Pressable
                 key={reason}
-                onPress={submitReport}
+                onPress={() => void submitReport(reason)}
                 style={styles.reason}
                 accessibilityRole="button"
               >
@@ -110,7 +119,7 @@ export function PostOptionsSheet({ visible, onClose, postId, author }: PostOptio
               </Pressable>
             ))}
           </>
-        ) : (
+        ) : step === 'done' ? (
           <View style={styles.done}>
             <View style={styles.doneIcon}>
               <Check size={22} color={colors.white} />
@@ -121,6 +130,24 @@ export function PostOptionsSheet({ visible, onClose, postId, author }: PostOptio
             </Text>
             <Pressable onPress={close} style={styles.doneButton} accessibilityRole="button">
               <Text style={styles.doneButtonLabel}>Εντάξει</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.done}>
+            <View style={[styles.doneIcon, styles.failedIcon]}>
+              <Flag size={22} color={colors.white} />
+            </View>
+            <Text style={styles.doneTitle}>Η αναφορά δεν στάλθηκε</Text>
+            <Text style={styles.doneBody}>
+              Κάτι πήγε στραβά. Δοκίμασε ξανά — αν επιμείνει, κάνε αποκλεισμό στο άτομο και
+              γράψε μας από τη Βοήθεια.
+            </Text>
+            <Pressable
+              onPress={() => setStep('reasons')}
+              style={styles.doneButton}
+              accessibilityRole="button"
+            >
+              <Text style={styles.doneButtonLabel}>Δοκίμασε ξανά</Text>
             </Pressable>
           </View>
         )}
@@ -246,6 +273,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  failedIcon: {
+    backgroundColor: colors.danger,
   },
   doneTitle: {
     fontSize: 16,
