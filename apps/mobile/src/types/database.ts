@@ -88,6 +88,17 @@ export type EventRow = {
   created_at: string;
 }
 
+/**
+ * The `events_public` view: every event column plus the host's badge and
+ * the attendee count, which RLS hides on the base tables.
+ */
+export type EventPublicRow = EventRow & {
+  host_name: string;
+  host_verified: boolean;
+  host_avatar_url: string | null;
+  spots_taken: number;
+};
+
 export type PostMediaRow = {
   id: string;
   post_id: string;
@@ -250,7 +261,19 @@ export interface Database {
       comments: Table<CommentRow, 'id' | 'created_at'>;
       threads: Table<ThreadRow, 'id' | 'created_at' | 'body' | 'pinned'>;
       thread_replies: Table<ThreadReplyRow, 'id' | 'created_at' | 'body'>;
-      events: Table<EventRow, 'id' | 'created_at' | 'description' | 'is_official'>;
+      events: Table<
+        EventRow,
+        | 'id'
+        | 'created_at'
+        | 'description'
+        | 'is_official'
+        | 'members_only'
+        | 'cover_path'
+        | 'venue'
+        | 'category_id'
+        | 'subcategory_id'
+        | 'price_cents'
+      >;
       messages: Table<MessageRow, 'id' | 'created_at' | 'body'>;
       rewards: Table<RewardRow, 'id' | 'created_at'>;
       post_media: Table<PostMediaRow, 'id' | 'position'>;
@@ -269,10 +292,12 @@ export interface Database {
       orders: Table<OrderRow, 'id' | 'created_at' | 'status' | 'note' | 'stripe_payment_intent_id'>;
       order_items: Table<OrderItemRow, 'id'>;
     };
+    Views: {
+      events_public: { Row: EventPublicRow; Relationships: [] };
+    };
     // The canonical "empty" form used by Supabase's own generated types.
     // Record<string, never> is not assignable to the library's generic
     // schema, which silently degrades every query to `never`.
-    Views: { [_ in never]: never };
     Functions: { [_ in never]: never };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };

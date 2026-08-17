@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
@@ -20,7 +21,7 @@ import {
 import {
   canJoinEvent,
   colors,
-  findLocation,
+  findPlace,
   gradients,
   paidMemberCta,
   radii,
@@ -29,9 +30,11 @@ import {
   toGreekUpperCase,
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { findEventDetail, type EventDetail } from '@/data/event-detail';
+import { findEventDetail } from '@/data/event-detail';
+import { formatEventDate } from '@/lib/date';
+import { fetchEvent, type EventSummary } from '@/lib/events-repo';
 import { linkTo, shareLink } from '@/lib/share';
-import { useAppState } from '@/state/app-state';
+import { useEvents } from '@/state/events';
 import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
 import { DiagonalGradient } from '@/components/gradient';
@@ -40,12 +43,50 @@ import { PlaceholderScreen } from '@/components/placeholder-screen';
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useSession();
-  const { hasJoined, toggleJoined } = useAppState();
+  const { events, hasJoined, toggleJoined } = useEvents();
   const [shareNote, setShareNote] = useState<string | null>(null);
+  const [joinNote, setJoinNote] = useState<string | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const event = typeof id === 'string' ? findEventDetail(id) : undefined;
+  const eventId = typeof id === 'string' ? id : '';
+  // The list usually already holds it, which makes opening a card
+  // instant; a deep link or a past event has to be fetched.
+  const listed = events.find((item) => item.id === eventId) ?? null;
+
+  const [fetched, setFetched] = useState<EventSummary | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!eventId || listed) return;
+
+    try {
+      setFetched(await fetchEvent(eventId));
+    } catch {
+      setFetched(null);
+    } finally {
+      setLoaded(true);
+    }
+  }, [eventId, listed]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const event = listed ?? fetched;
+
+  // Announcements, FAQ and reviews have no tables yet, so they exist only
+  // for the seeded preview events and their sections stay hidden for real
+  // ones rather than showing invented answers from the host.
+  const extras = findEventDetail(eventId);
+
+  if (!event && !listed && !loaded) {
+    return (
+      <View style={[styles.screen, styles.centre]}>
+        <ActivityIndicator color={colors.pink} />
+      </View>
+    );
+  }
 
   if (!event) {
     return (
@@ -62,7 +103,7 @@ export default function EventDetailScreen() {
   const canJoin = canJoinEvent(user, { is_official: event.isOfficial });
   const isFree = event.price === 0;
   const spotsLeft = event.spotsTotal - event.spotsTaken;
-  const cityName = findLocation(event.location)?.name ?? '';
+  const cityName = findPlace(event.location)?.name ?? '';
 
   return (
     <View style={styles.screen}>
@@ -71,6 +112,15 @@ export default function EventDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <DiagonalGradient colors={gradients.eventCover} style={styles.cover}>
+          {event.coverUrl ? (
+            <Image
+              source={{ uri: event.coverUrl }}
+              style={styles.coverImage}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={160}
+            />
+          ) : null}
           <SafeAreaView edges={['top']}>
             <View style={styles.coverBar}>
               <Pressable
@@ -105,7 +155,7 @@ export default function EventDetailScreen() {
           <Text style={styles.title}>{event.title}</Text>
 
           <View style={styles.hostRow}>
-            <Avatar size={38} />
+            <Avatar size={38} uri={event.hostAvatarUrl ?? undefined} />
             <View style={styles.hostText}>
               <View style={styles.hostNameRow}>
                 <Text style={styles.hostName}>{event.hostName}</Text>
@@ -115,18 +165,18 @@ export default function EventDetailScreen() {
               </View>
               <Text style={styles.hostLabel}>Διοργανώτρια</Text>
             </View>
-            {event.reviewCount > 0 ? (
+            {extras && extras.reviewCount > 0 ? (
               <View style={styles.ratingChip}>
                 <Star size={11} color={colors.gold} fill={colors.gold} />
-                <Text style={styles.ratingValue}>{event.rating}</Text>
+                <Text style={styles.ratingValue}>{extras.rating}</Text>
               </View>
             ) : null}
           </View>
 
           <View style={styles.factCard}>
-            <Fact icon={CalendarDays} label={event.date} />
+            <Fact icon={CalendarDays} label={formatEventDate(event.isoDate)} />
             <Fact icon={Clock} label={event.time} />
-            <Fact icon={MapPin} label={`${event.venue} · ${cityName}`} />
+            <Fact icon={MapPin} label={[event.venue, cityName].filter(Boolean).join(' · ')} />
             <Fact
               icon={Users}
               label={
@@ -137,29 +187,25 @@ export default function EventDetailScreen() {
             />
           </View>
 
-          <Section title="Περιγραφή">
-            <Text style={styles.paragraph}>{event.description}</Text>
-          </Section>
+          {event.description ? (
+            <Section title="Περιγραφή">
+              <Text style={styles.paragraph}>{event.description}</Text>
+            </Section>
+          ) : null}
 
-          <Section title="Τοποθεσία">
-            <View style={styles.map}>
-              <MapPin size={20} color={colors.pink} />
-              <Text style={styles.mapLabel}>{event.address}</Text>
-              <Text style={styles.mapHint}>Ο χάρτης ενεργοποιείται μαζί με τα πραγματικά events.</Text>
-            </View>
-          </Section>
+          {event.venue ? (
+            <Section title="Τοποθεσία">
+              <View style={styles.map}>
+                <MapPin size={20} color={colors.pink} />
+                <Text style={styles.mapLabel}>{event.venue}</Text>
+                <Text style={styles.mapHint}>{cityName}</Text>
+              </View>
+            </Section>
+          ) : null}
 
-          <Section title="Φωτογραφίες">
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gallery}>
-              {event.gallery.map((tint, index) => (
-                <View key={`${tint}-${index}`} style={[styles.galleryItem, { backgroundColor: tint }]} />
-              ))}
-            </ScrollView>
-          </Section>
-
-          {event.announcements.length > 0 ? (
+          {extras && extras.announcements.length > 0 ? (
             <Section title="Ανακοινώσεις">
-              {event.announcements.map((announcement) => (
+              {extras.announcements.map((announcement) => (
                 <View key={announcement.id} style={styles.announcement}>
                   <Megaphone size={15} color={colors.hostPurple} />
                   <View style={styles.announcementText}>
@@ -176,22 +222,24 @@ export default function EventDetailScreen() {
               <MessageCircle size={18} color={canJoin ? colors.pink : colors.textMuted} />
               <Text style={styles.chatLabel}>
                 {canJoin
-                  ? `${event.attendees} συμμετέχουσες συζητούν εδώ`
+                  ? `${event.spotsTaken} συμμετέχουσες συζητούν εδώ`
                   : 'Η συζήτηση είναι διαθέσιμη στα μέλη'}
               </Text>
               {!canJoin ? <Lock size={14} color={colors.textMuted} /> : null}
             </View>
           </Section>
 
-          <Section title="Συχνές ερωτήσεις">
-            {event.faq.map((item) => (
-              <FaqRow key={item.id} question={item.question} answer={item.answer} />
-            ))}
-          </Section>
+          {extras && extras.faq.length > 0 ? (
+            <Section title="Συχνές ερωτήσεις">
+              {extras.faq.map((item) => (
+                <FaqRow key={item.id} question={item.question} answer={item.answer} />
+              ))}
+            </Section>
+          ) : null}
 
-          {event.reviews.length > 0 ? (
-            <Section title={`Αξιολογήσεις (${event.reviewCount})`}>
-              {event.reviews.map((review) => (
+          {extras && extras.reviews.length > 0 ? (
+            <Section title={`Αξιολογήσεις (${extras.reviewCount})`}>
+              {extras.reviews.map((review) => (
                 <View key={review.id} style={styles.review}>
                   <View style={styles.reviewHeader}>
                     <Text style={styles.reviewAuthor}>{review.author}</Text>
@@ -202,6 +250,7 @@ export default function EventDetailScreen() {
               ))}
             </Section>
           ) : null}
+          {joinNote ? <Text style={styles.joinNote}>{joinNote}</Text> : null}
         </View>
       </ScrollView>
 
@@ -212,7 +261,12 @@ export default function EventDetailScreen() {
         soldOut={spotsLeft <= 0}
         joined={hasJoined(event.id)}
         onUpgrade={() => router.push('/membership')}
-        onJoin={() => toggleJoined(event.id)}
+        onJoin={() => {
+          setJoinNote(null);
+          void toggleJoined(event.id).then((ok) => {
+            if (!ok) setJoinNote('Η συμμετοχή δεν καταχωρήθηκε. Δοκίμασε ξανά.');
+          });
+        }}
       />
     </View>
   );
@@ -320,9 +374,24 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: 108,
   },
+  centre: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   cover: {
     height: 220,
     paddingHorizontal: spacing.screen,
+  },
+  // Under the back and share buttons, over the gradient that stands in
+  // for a missing cover.
+  coverImage: {
+    ...StyleSheet.absoluteFill,
+  },
+  joinNote: {
+    fontSize: 11.5,
+    fontFamily: font.bold,
+    color: colors.danger,
+    marginTop: spacing.md,
   },
   coverBar: {
     flexDirection: 'row',

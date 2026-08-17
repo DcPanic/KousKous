@@ -15,8 +15,8 @@ import {
   toGreekUpperCase,
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { events } from '@/data/mock';
 import { people } from '@/data/people';
+import { useEvents } from '@/state/events';
 import { Avatar } from '@/components/avatar';
 
 const MIN_QUERY = 2;
@@ -54,6 +54,7 @@ function shortDate(iso: string): string {
  */
 export default function SearchScreen() {
   const router = useRouter();
+  const { events } = useEvents();
   const [query, setQuery] = useState('');
 
   const term = normalizeForSearch(query);
@@ -93,7 +94,7 @@ export default function SearchScreen() {
         );
       })
       .slice(0, MAX_PER_GROUP);
-  }, [term, active]);
+  }, [events, term, active]);
 
   const total = matchedPeople.length + matchedCategories.length + matchedEvents.length;
 

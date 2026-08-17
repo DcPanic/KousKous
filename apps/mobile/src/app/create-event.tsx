@@ -27,6 +27,7 @@ import {
 import { font } from '@/theme/typography';
 import type { Attachment } from '@/data/forum';
 import { pickMedia } from '@/lib/media';
+import { useEvents } from '@/state/events';
 import { useSession } from '@/state/session';
 import { AttachmentGrid } from '@/components/attachments';
 import { SimplePicker } from '@/components/simple-picker';
@@ -45,6 +46,7 @@ function euro(value: string): string {
 export default function CreateEventScreen() {
   const router = useRouter();
   const { user } = useSession();
+  const { publish: publishEvent } = useEvents();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -59,6 +61,8 @@ export default function CreateEventScreen() {
   const [spots, setSpots] = useState('');
   const [price, setPrice] = useState('');
   const [womenOnly, setWomenOnly] = useState(true);
+  const [publishing, setPublishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Only approved hosts can publish paid events (spec §2.3). The screen is
   // reachable from the host dashboard, so a wrong tier means a wrong link
@@ -77,10 +81,41 @@ export default function CreateEventScreen() {
   const canPublish =
     title.trim().length > 0 && date !== null && time.trim().length > 0 && venue.trim().length > 0;
 
-  const publish = () => {
-    if (!canPublish) return;
-    // Persisting an event needs Supabase; until then publishing returns to
-    // the dashboard rather than pretending the event went live.
+  const publish = async () => {
+    if (!canPublish || !date || publishing) return;
+
+    setPublishing(true);
+    setError(null);
+
+    const cents = Math.round(Number(price.replace(',', '.')) * 100);
+    const created = await publishEvent({
+      title: title.trim(),
+      description: description.trim(),
+      categoryId,
+      subcategoryId: null,
+      location: placeId,
+      venue: venue.trim(),
+      isoDate: date,
+      time: time.trim(),
+      priceCents: Number.isFinite(cents) && cents > 0 ? cents : 0,
+      // An empty field means the host has not capped it; the column
+      // requires a positive number, so this is the practical "open" value.
+      spotsTotal: Number(spots) > 0 ? Number(spots) : 100,
+      membersOnly: womenOnly,
+      cover: cover[0],
+    });
+
+    setPublishing(false);
+
+    if (!created) {
+      setError(
+        paid
+          ? 'Το event δεν δημοσιεύτηκε. Για event με χρέωση χρειάζεται συνδεδεμένος λογαριασμός πληρωμών.'
+          : 'Το event δεν δημοσιεύτηκε. Δοκίμασε ξανά.',
+      );
+      return;
+    }
+
     router.back();
   };
 
@@ -102,12 +137,14 @@ export default function CreateEventScreen() {
         </Pressable>
         <Text style={styles.headerTitle}>Νέο event</Text>
         <Pressable
-          onPress={publish}
-          disabled={!canPublish}
-          style={[styles.publish, !canPublish && styles.publishDisabled]}
+          onPress={() => void publish()}
+          disabled={!canPublish || publishing}
+          style={[styles.publish, (!canPublish || publishing) && styles.publishDisabled]}
           accessibilityRole="button"
         >
-          <Text style={styles.publishLabel}>Δημοσίευση</Text>
+          <Text style={styles.publishLabel}>
+            {publishing ? 'Δημοσίευση...' : 'Δημοσίευση'}
+          </Text>
         </Pressable>
       </View>
 
@@ -295,6 +332,8 @@ export default function CreateEventScreen() {
               </Text>
             </View>
           ) : null}
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -536,5 +575,12 @@ const styles = StyleSheet.create({
     fontFamily: font.medium,
     color: colors.hostPurpleDark,
     lineHeight: 16,
+  },
+  error: {
+    fontSize: 11.5,
+    fontFamily: font.bold,
+    color: colors.danger,
+    lineHeight: 17,
+    marginTop: spacing.md,
   },
 });

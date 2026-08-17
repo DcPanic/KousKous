@@ -14,6 +14,7 @@ import {
 import { font } from '@/theme/typography';
 import { profileStats } from '@/data/mock';
 import { useAppState } from '@/state/app-state';
+import { useEvents } from '@/state/events';
 import { useFeed } from '@/state/feed';
 import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
@@ -22,7 +23,8 @@ import { PostCard } from '@/components/post-card';
 export default function ProfileScreen() {
   const { user, tier, signedIn } = useSession();
   const { posts } = useFeed();
-  const { savedPostIds, joinedEventIds } = useAppState();
+  const { savedPostIds } = useAppState();
+  const { events, hasJoined } = useEvents();
   const router = useRouter();
   const [tab, setTab] = useState<'mine' | 'saved'>('mine');
 
@@ -47,7 +49,7 @@ export default function ProfileScreen() {
     ? [
         `${myPosts.length} δημοσιεύσεις`,
         `${savedPostIds.length} αποθηκευμένα`,
-        `${joinedEventIds.length} events`,
+        `${events.filter((event) => hasJoined(event.id)).length} events`,
       ].join('  ·  ')
     : profileStats.map(([value, label]) => `${value} ${label.toLowerCase()}`).join('  ·  ');
 

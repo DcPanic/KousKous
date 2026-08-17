@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
@@ -16,8 +16,11 @@ import {
 } from 'lucide-react-native';
 import { colors, gradients, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
+import { formatEventDate } from '@/lib/date';
+import { fetchHostEvents, type EventSummary } from '@/lib/events-repo';
+import { euro } from '@/lib/money';
+import { useSession } from '@/state/session';
 import {
-  hostEvents,
   hostNextEvent,
   hostPayments,
   hostRatingSummary,
@@ -113,9 +116,42 @@ export function HostOverviewTab({ paymentVerified }: TabProps) {
 
 export function HostEventsTab() {
   const router = useRouter();
+  const { user, signedIn } = useSession();
   const [scope, setScope] = useState<'upcoming' | 'past'>('upcoming');
   // Which event's door list is open, and whether the QR button opened it.
-  const [checkIn, setCheckIn] = useState<{ title: string; scanning: boolean } | null>(null);
+  const [checkIn, setCheckIn] = useState<{ id: string; title: string; scanning: boolean } | null>(
+    null,
+  );
+
+  const [events, setEvents] = useState<EventSummary[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!signedIn) {
+      setLoaded(true);
+      return;
+    }
+
+    try {
+      setEvents(await fetchHostEvents(user.id));
+    } catch {
+      setEvents([]);
+    } finally {
+      setLoaded(true);
+    }
+  }, [signedIn, user.id]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Comparing against now rather than the start of today, so an event
+  // still running this evening stays under "Επερχόμενα".
+  const now = Date.now();
+  const visible = events.filter((event) => {
+    const starts = new Date(`${event.isoDate}T${event.time}`).getTime();
+    return scope === 'upcoming' ? starts >= now : starts < now;
+  });
 
   return (
     <ScrollView contentContainerStyle={shared.content} showsVerticalScrollIndicator={false}>
@@ -147,18 +183,22 @@ export function HostEventsTab() {
         })}
       </View>
 
-      {hostEvents[scope].map((event) => (
+      {visible.map((event) => (
         <View key={event.id} style={shared.card}>
           <Text style={styles.cardTitle}>{event.title}</Text>
           <View style={styles.nextEventMeta}>
-            <Text style={styles.meta}>{event.date}</Text>
-            <Text style={styles.meta}>{event.spots} θέσεις</Text>
+            <Text style={styles.meta}>
+              {formatEventDate(event.isoDate)} · {event.time}
+            </Text>
+            <Text style={styles.meta}>
+              {event.spotsTaken}/{event.spotsTotal} θέσεις
+            </Text>
           </View>
           <View style={styles.cardFooter}>
-            <Text style={styles.revenue}>{event.revenue}</Text>
+            <Text style={styles.revenue}>{euro(event.price * event.spotsTaken * 100)}</Text>
             <View style={styles.iconButtons}>
               <Pressable
-                onPress={() => setCheckIn({ title: event.title, scanning: true })}
+                onPress={() => setCheckIn({ id: event.id, title: event.title, scanning: true })}
                 style={styles.iconButton}
                 accessibilityRole="button"
                 accessibilityLabel="QR check-in"
@@ -166,7 +206,7 @@ export function HostEventsTab() {
                 <QrCode size={14} color={ACCENT} />
               </Pressable>
               <Pressable
-                onPress={() => setCheckIn({ title: event.title, scanning: false })}
+                onPress={() => setCheckIn({ id: event.id, title: event.title, scanning: false })}
                 style={styles.iconButton}
                 accessibilityRole="button"
                 accessibilityLabel="Λίστα συμμετεχουσών"
@@ -178,9 +218,18 @@ export function HostEventsTab() {
         </View>
       ))}
 
+      {visible.length === 0 && loaded ? (
+        <Text style={styles.emptyEvents}>
+          {scope === 'upcoming'
+            ? 'Δεν έχεις επερχόμενα events. Πάτα «Νέο Event» για το πρώτο σου.'
+            : 'Κανένα ολοκληρωμένο event ακόμα.'}
+        </Text>
+      ) : null}
+
       <CheckInSheet
         visible={checkIn !== null}
         onClose={() => setCheckIn(null)}
+        eventId={checkIn?.id ?? ''}
         eventTitle={checkIn?.title ?? ''}
         scanning={checkIn?.scanning}
       />
@@ -400,6 +449,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  emptyEvents: {
+    fontSize: 12.5,
+    fontFamily: font.regular,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 19,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xxl,
   },
   revenue: {
     fontSize: 13,

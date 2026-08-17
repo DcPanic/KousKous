@@ -58,11 +58,6 @@ interface AppStateValue {
   isFollowing: (categoryId: string) => boolean;
   toggleFollow: (categoryId: string) => void;
 
-  /** Events the user said yes to. */
-  joinedEventIds: string[];
-  hasJoined: (eventId: string) => boolean;
-  toggleJoined: (eventId: string) => void;
-
   /** Women she blocked and posts she reported, by author name. */
   blockedNames: string[];
   isBlocked: (name: string) => boolean;
@@ -123,7 +118,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     DEFAULT_FOLLOWS,
   );
   const [savedThreadIds, setSavedThreadIds] = usePersistedStringList('savedThreads');
-  const [joinedEventIds, setJoinedEventIds] = usePersistedStringList('joinedEvents');
   const [likedPostIds, setLikedPostIds] = usePersistedStringList('likedPosts');
   const [savedPostIds, setSavedPostIds] = usePersistedStringList('savedPosts');
   const [blockedNames, setBlockedNames] = usePersistedStringList('blockedNames');
@@ -179,12 +173,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       prev.includes(categoryId)
         ? prev.filter((item) => item !== categoryId)
         : [...prev, categoryId],
-    );
-  }, []);
-
-  const toggleJoined = useCallback((eventId: string) => {
-    setJoinedEventIds((prev) =>
-      prev.includes(eventId) ? prev.filter((item) => item !== eventId) : [eventId, ...prev],
     );
   }, []);
 
@@ -304,9 +292,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       followedCategories,
       isFollowing: (categoryId: string) => followedCategories.includes(categoryId),
       toggleFollow,
-      joinedEventIds,
-      hasJoined: (eventId: string) => joinedEventIds.includes(eventId),
-      toggleJoined,
       blockedNames,
       isBlocked: (name: string) => blockedNames.includes(name),
       toggleBlocked,
@@ -350,8 +335,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       clearFilters,
       followedCategories,
       toggleFollow,
-      joinedEventIds,
-      toggleJoined,
       blockedNames,
       toggleBlocked,
       reportedPostIds,

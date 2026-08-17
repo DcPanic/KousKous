@@ -1,14 +1,22 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Check, Info, QrCode } from 'lucide-react-native';
 import { colors, radii, spacing, toGreekUpperCase } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { people } from '@/data/people';
+import { fetchAttendees, setCheckedIn as writeCheckedIn } from '@/lib/events-repo';
 import { Avatar } from './avatar';
+
+interface Attendee {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  checkedIn: boolean;
+}
 
 interface CheckInSheetProps {
   visible: boolean;
   onClose: () => void;
+  eventId: string;
   eventTitle: string;
   /** Opened from the QR button rather than the attendee list. */
   scanning?: boolean;
@@ -21,15 +29,43 @@ interface CheckInSheetProps {
  * so and falls back to tapping a name — which is what a host does anyway
  * when a phone battery dies at the door.
  */
-export function CheckInSheet({ visible, onClose, eventTitle, scanning }: CheckInSheetProps) {
-  const [checkedIn, setCheckedIn] = useState<string[]>([]);
+export function CheckInSheet({
+  visible,
+  onClose,
+  eventId,
+  eventTitle,
+  scanning,
+}: CheckInSheetProps) {
+  const [attendees, setAttendees] = useState<Attendee[]>([]);
 
-  const attendees = people.slice(0, 5);
+  const load = useCallback(async () => {
+    if (!visible || !eventId) return;
+    setAttendees(await fetchAttendees(eventId));
+  }, [visible, eventId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const here = attendees.filter((attendee) => attendee.checkedIn).length;
 
   const toggle = (id: string) => {
-    setCheckedIn((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [id, ...prev],
+    const attendee = attendees.find((item) => item.id === id);
+    if (!attendee) return;
+
+    const next = !attendee.checkedIn;
+
+    // Flipped straight away — a host at the door should not wait on the
+    // network — and put back if the write is refused.
+    setAttendees((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, checkedIn: next } : item)),
     );
+
+    void writeCheckedIn(eventId, id, next).catch(() => {
+      setAttendees((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, checkedIn: !next } : item)),
+      );
+    });
   };
 
   return (
@@ -44,7 +80,7 @@ export function CheckInSheet({ visible, onClose, eventTitle, scanning }: CheckIn
           {eventTitle}
         </Text>
         <Text style={styles.count}>
-          {checkedIn.length} από {attendees.length} έχουν έρθει
+          {here} από {attendees.length} έχουν έρθει
         </Text>
 
         {scanning ? (
@@ -58,34 +94,36 @@ export function CheckInSheet({ visible, onClose, eventTitle, scanning }: CheckIn
         ) : (
           <View style={styles.notice}>
             <Info size={15} color={colors.hostPurpleDark} />
-            <Text style={styles.noticeLabel}>
-              Πάτα το όνομα μόλις φτάσει. Η λίστα δεν αποθηκεύεται ακόμα στον server.
-            </Text>
+            <Text style={styles.noticeLabel}>Πάτα το όνομα μόλις φτάσει.</Text>
           </View>
         )}
 
         <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
-          {attendees.map((person) => {
-            const here = checkedIn.includes(person.id);
-            return (
-              <Pressable
-                key={person.id}
-                onPress={() => toggle(person.id)}
-                style={styles.row}
-                accessibilityRole="button"
-                accessibilityState={{ selected: here }}
-                accessibilityLabel={`${here ? 'Αναίρεση check-in' : 'Check-in'} ${person.name}`}
+          {attendees.map((person) => (
+            <Pressable
+              key={person.id}
+              onPress={() => toggle(person.id)}
+              style={styles.row}
+              accessibilityRole="button"
+              accessibilityState={{ selected: person.checkedIn }}
+              accessibilityLabel={`${person.checkedIn ? 'Αναίρεση check-in' : 'Check-in'} ${person.name}`}
+            >
+              <Avatar size={36} uri={person.avatarUrl ?? undefined} />
+              <Text
+                style={[styles.name, person.checkedIn && styles.nameChecked]}
+                numberOfLines={1}
               >
-                <Avatar size={36} />
-                <Text style={[styles.name, here && styles.nameChecked]} numberOfLines={1}>
-                  {person.name}
-                </Text>
-                <View style={[styles.tick, here && styles.tickOn]}>
-                  {here ? <Check size={14} color={colors.white} /> : null}
-                </View>
-              </Pressable>
-            );
-          })}
+                {person.name}
+              </Text>
+              <View style={[styles.tick, person.checkedIn && styles.tickOn]}>
+                {person.checkedIn ? <Check size={14} color={colors.white} /> : null}
+              </View>
+            </Pressable>
+          ))}
+
+          {attendees.length === 0 ? (
+            <Text style={styles.empty}>Καμία συμμετοχή ακόμα.</Text>
+          ) : null}
         </ScrollView>
 
         <Pressable onPress={onClose} style={styles.done} accessibilityRole="button">
@@ -178,6 +216,13 @@ const styles = StyleSheet.create({
   },
   nameChecked: {
     color: colors.textMuted,
+  },
+  empty: {
+    fontSize: 12.5,
+    fontFamily: font.regular,
+    color: colors.textMuted,
+    textAlign: 'center',
+    paddingVertical: spacing.xl,
   },
   tick: {
     width: 24,

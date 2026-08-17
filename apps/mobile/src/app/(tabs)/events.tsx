@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Calendar, Crown, Lock, Users } from 'lucide-react-native';
 import {
   accountTier,
@@ -17,9 +18,9 @@ import {
   spacing,
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { events } from '@/data/mock';
 import { formatEventDate } from '@/lib/date';
 import { useAppState } from '@/state/app-state';
+import { useEvents } from '@/state/events';
 import { useSession } from '@/state/session';
 import { DiagonalGradient } from '@/components/gradient';
 import { FilterBar } from '@/components/filter-bar';
@@ -28,6 +29,7 @@ import { SectionEyebrow } from '@/components/section-eyebrow';
 export default function EventsScreen() {
   const { user } = useSession();
   const { selectedPlaces, eventCategoryIds, dateRange, priceBand, availableOnly } = useAppState();
+  const { events, loading, error, refresh } = useEvents();
   const router = useRouter();
   // Events are open to everyone. Only the KousKous events themselves are
   // a members' benefit, and that is marked per card rather than by hiding
@@ -46,7 +48,7 @@ export default function EventsScreen() {
         .filter((event) => matchesPrice(event.price, priceBand))
         .filter((event) => !availableOnly || event.spotsTaken < event.spotsTotal)
         .sort((a, b) => a.isoDate.localeCompare(b.isoDate)),
-    [selectedPlaces, eventCategoryIds, dateRange, priceBand, availableOnly],
+    [events, selectedPlaces, eventCategoryIds, dateRange, priceBand, availableOnly],
   );
 
   return (
@@ -56,6 +58,9 @@ export default function EventsScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={colors.pink} />
+        }
       >
         <SectionEyebrow>Επερχόμενα Events</SectionEyebrow>
         <View style={styles.list}>
@@ -73,6 +78,15 @@ export default function EventsScreen() {
                 accessibilityLabel={event.title}
               >
                 <DiagonalGradient colors={gradients.eventCover} style={styles.cover}>
+                  {event.coverUrl ? (
+                    <Image
+                      source={{ uri: event.coverUrl }}
+                      style={styles.coverImage}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      transition={160}
+                    />
+                  ) : null}
                   {category ? (
                     <View style={styles.categoryBadge}>
                       <Text style={styles.categoryEmoji}>{category.emoji}</Text>
@@ -116,11 +130,15 @@ export default function EventsScreen() {
             );
           })}
 
-          {visibleEvents.length === 0 ? (
+          {visibleEvents.length === 0 && !loading ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>Κανένα event με αυτά τα φίλτρα</Text>
+              <Text style={styles.emptyTitle}>
+                {error ? 'Δεν φόρτωσαν τα events' : 'Κανένα event με αυτά τα φίλτρα'}
+              </Text>
               <Text style={styles.emptyBody}>
-                Δοκίμασε άλλη ημερομηνία ή ευρύτερη τοποθεσία.
+                {error
+                  ? 'Τράβα προς τα κάτω για να δοκιμάσεις ξανά.'
+                  : 'Δοκίμασε άλλη ημερομηνία ή ευρύτερη τοποθεσία.'}
               </Text>
             </View>
           ) : null}
@@ -155,6 +173,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
+  },
+  // Sits under the badges, over the gradient that stands in for a
+  // missing cover.
+  coverImage: {
+    ...StyleSheet.absoluteFill,
   },
   categoryBadge: {
     flexDirection: 'row',
