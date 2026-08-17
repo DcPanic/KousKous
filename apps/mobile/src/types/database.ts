@@ -54,6 +54,7 @@ export type CommentRow = {
 export type ThreadRow = {
   id: string;
   category_id: string;
+  subcategory_id: string | null;
   author_id: string;
   title: string;
   body: string;
@@ -69,6 +70,35 @@ export type ThreadReplyRow = {
   body: string;
   created_at: string;
 }
+
+export type ThreadMediaRow = {
+  id: string;
+  /** Set on an opening post; null on a reply. Exactly one of the two. */
+  thread_id: string | null;
+  reply_id: string | null;
+  kind: 'image' | 'video';
+  storage_path: string;
+  position: number;
+};
+
+export type ThreadLikeRow = {
+  thread_id: string;
+  profile_id: string;
+  created_at: string;
+};
+
+export type ReplyLikeRow = {
+  reply_id: string;
+  profile_id: string;
+  created_at: string;
+};
+
+/** The `forum_stats` view: totals per community, no thread content. */
+export type ForumStatsRow = {
+  category_id: string;
+  thread_count: number;
+  reply_count: number;
+};
 
 export type EventRow = {
   id: string;
@@ -259,8 +289,14 @@ export interface Database {
       profiles: Table<ProfileRow, Exclude<keyof ProfileRow, 'id' | 'name'>>;
       posts: Table<PostRow, 'id' | 'created_at' | 'caption' | 'hashtags' | 'subcategory_id'>;
       comments: Table<CommentRow, 'id' | 'created_at'>;
-      threads: Table<ThreadRow, 'id' | 'created_at' | 'body' | 'pinned'>;
+      threads: Table<
+        ThreadRow,
+        'id' | 'created_at' | 'body' | 'pinned' | 'subcategory_id' | 'location'
+      >;
       thread_replies: Table<ThreadReplyRow, 'id' | 'created_at' | 'body'>;
+      thread_media: Table<ThreadMediaRow, 'id' | 'position' | 'thread_id' | 'reply_id'>;
+      thread_likes: Table<ThreadLikeRow, 'created_at'>;
+      reply_likes: Table<ReplyLikeRow, 'created_at'>;
       events: Table<
         EventRow,
         | 'id'
@@ -294,6 +330,7 @@ export interface Database {
     };
     Views: {
       events_public: { Row: EventPublicRow; Relationships: [] };
+      forum_stats: { Row: ForumStatsRow; Relationships: [] };
     };
     // The canonical "empty" form used by Supabase's own generated types.
     // Record<string, never> is not assignable to the library's generic

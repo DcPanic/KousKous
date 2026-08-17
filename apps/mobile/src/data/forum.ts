@@ -38,10 +38,21 @@ export interface ForumThread {
   body: string;
   attachments: Attachment[];
   replies: ForumReply[];
+  /**
+   * How many replies exist, which is not always how many are loaded: the
+   * forum list asks the database for the number only and fetches the
+   * replies themselves when the thread is opened.
+   */
+  replyCount?: number;
   likes: number;
   /** Location id, so the shared location filter applies here too. */
   location: string;
   pinned: boolean;
+}
+
+/** Replies loaded, or the count the list was given. */
+export function replyCountOf(thread: ForumThread): number {
+  return thread.replyCount ?? thread.replies.length;
 }
 
 const seededThreads: ForumThread[] = [
@@ -291,7 +302,7 @@ export const forumSortLabels: Record<ForumSort, string> = {
  */
 export function sortThreads(threads: ForumThread[], sort: ForumSort): ForumThread[] {
   if (sort === 'unanswered') {
-    return threads.filter((thread) => thread.replies.length === 0);
+    return threads.filter((thread) => replyCountOf(thread) === 0);
   }
 
   const ordered =

@@ -12,24 +12,36 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ImagePlus, Video, X } from 'lucide-react-native';
-import { can, colors, findCategory, radii, shadows, spacing } from '@kouskous/shared';
+import {
+  can,
+  colors,
+  findCategory,
+  radii,
+  shadows,
+  spacing,
+  subcategoriesFor,
+} from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import type { Attachment } from '@/data/forum';
 import { pickMedia } from '@/lib/media';
-import { useAppState } from '@/state/app-state';
+import { useForums } from '@/state/forums';
 import { useSession } from '@/state/session';
 import { AttachmentGrid } from '@/components/attachments';
+import { SimplePicker } from '@/components/simple-picker';
 import { PlaceholderScreen } from '@/components/placeholder-screen';
 
 export default function NewThreadScreen() {
   const { categoryId } = useLocalSearchParams<{ categoryId: string }>();
   const router = useRouter();
   const { user } = useSession();
-  const { addThread } = useAppState();
+  const { publish: publishThread } = useForums();
 
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [subcategoryId, setSubcategoryId] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const category = typeof categoryId === 'string' ? findCategory(categoryId) : undefined;
 
@@ -50,25 +62,27 @@ export default function NewThreadScreen() {
 
   const canPublish = title.trim().length > 2 && body.trim().length > 0;
 
-  const publish = () => {
-    if (!canPublish) return;
+  const publish = async () => {
+    if (!canPublish || publishing) return;
 
-    const id = `local-${Date.now()}`;
-    addThread({
-      id,
+    setPublishing(true);
+    setError(null);
+
+    const id = await publishThread({
       categoryId: category.id,
-      author: user.name,
-      verified: user.is_verified,
-      timeAgo: 'μόλις τώρα',
+      subcategoryId,
       title: title.trim(),
-      excerpt: body.trim().slice(0, 90),
       body: body.trim(),
+      location: user.location ?? null,
       attachments,
-      replies: [],
-      likes: 0,
-      location: user.location ?? 'athens',
-      pinned: false,
     });
+
+    setPublishing(false);
+
+    if (!id) {
+      setError('Η συζήτηση δεν δημοσιεύτηκε. Δοκίμασε ξανά.');
+      return;
+    }
 
     // Replace, so the back gesture returns to the forum rather than to
     // the composer the user has just finished with.
@@ -93,12 +107,12 @@ export default function NewThreadScreen() {
           </Text>
         </View>
         <Pressable
-          onPress={publish}
-          disabled={!canPublish}
-          style={[styles.publish, !canPublish && styles.publishDisabled]}
+          onPress={() => void publish()}
+          disabled={!canPublish || publishing}
+          style={[styles.publish, (!canPublish || publishing) && styles.publishDisabled]}
           accessibilityRole="button"
         >
-          <Text style={styles.publishLabel}>Δημοσίευση</Text>
+          <Text style={styles.publishLabel}>{publishing ? 'Δημοσίευση...' : 'Δημοσίευση'}</Text>
         </Pressable>
       </View>
 
@@ -123,6 +137,16 @@ export default function NewThreadScreen() {
             placeholderTextColor={colors.textMuted}
             style={styles.bodyInput}
             multiline
+          />
+
+          {/* The community is already chosen by the route, so only the
+              narrower choice is offered here. */}
+          <SimplePicker
+            label="Θέμα (προαιρετικό)"
+            placeholder={`Διάλεξε θέμα στο ${category.name}`}
+            options={subcategoriesFor(category.id)}
+            value={subcategoryId}
+            onChange={setSubcategoryId}
           />
 
           <AttachmentGrid
@@ -152,6 +176,8 @@ export default function NewThreadScreen() {
             <Text style={styles.toolLabel}>Βίντεο</Text>
           </Pressable>
         </View>
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -161,6 +187,13 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.cream,
+  },
+  error: {
+    fontSize: 11.5,
+    fontFamily: font.bold,
+    color: colors.danger,
+    paddingHorizontal: spacing.screen,
+    paddingBottom: spacing.md,
   },
   flex: {
     flex: 1,

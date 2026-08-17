@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,8 +22,9 @@ import {
   spacing,
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { forumSortLabels, sortThreads, threadsForCategory, type ForumSort } from '@/data/forum';
+import { forumSortLabels, replyCountOf, sortThreads, type ForumSort } from '@/data/forum';
 import { useAppState } from '@/state/app-state';
+import { useForums } from '@/state/forums';
 import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
 import { AttachmentGrid } from '@/components/attachments';
@@ -35,28 +36,25 @@ const SORTS: ForumSort[] = ['recent', 'popular', 'unanswered'];
 export default function CommunityForumScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useSession();
-  const {
-    isFollowing,
-    toggleFollow,
-    selectedPlaces,
-    createdThreads,
-    repliesFor,
-    isSaved,
-    toggleSaved,
-  } = useAppState();
+  const { isFollowing, toggleFollow, selectedPlaces } = useAppState();
+  const { threadsFor, loadThreads, loadingCategory, isSaved, toggleSaved } = useForums();
   const router = useRouter();
   const [sort, setSort] = useState<ForumSort>('recent');
 
   const category = typeof id === 'string' ? findCategory(id) : undefined;
+  const categoryId = category?.id;
+
+  useEffect(() => {
+    if (categoryId) void loadThreads(categoryId);
+  }, [categoryId, loadThreads]);
 
   const threads = useMemo(() => {
     if (!category) return [];
-    // Threads started in this session sit alongside the seeded ones.
-    const mine = createdThreads.filter((thread) => thread.categoryId === category.id);
-    const all = [...mine, ...threadsForCategory(category.id)];
-    const byLocation = all.filter((thread) => matchesPlaces(thread.location, selectedPlaces));
+    const byLocation = threadsFor(category.id).filter((thread) =>
+      matchesPlaces(thread.location, selectedPlaces),
+    );
     return sortThreads(byLocation, sort);
-  }, [category, createdThreads, selectedPlaces, sort]);
+  }, [category, threadsFor, selectedPlaces, sort]);
 
   if (!category) {
     return (
@@ -124,7 +122,7 @@ export default function CommunityForumScreen() {
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
         {threads.map((thread) => {
           const saved = isSaved(thread.id);
-          const replyCount = thread.replies.length + repliesFor(thread.id).length;
+          const replyCount = replyCountOf(thread);
 
           return (
             <Pressable

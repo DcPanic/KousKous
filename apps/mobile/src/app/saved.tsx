@@ -5,10 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Bookmark, Heart, MessageCircle } from 'lucide-react-native';
 import { colors, findCategory, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { findThread, type ForumThread } from '@/data/forum';
+import { findThread, replyCountOf, type ForumThread } from '@/data/forum';
 import type { MockPost } from '@/data/mock';
 import { useAppState } from '@/state/app-state';
 import { useFeed } from '@/state/feed';
+import { useForums } from '@/state/forums';
 import { PostCard } from '@/components/post-card';
 
 /**
@@ -17,23 +18,20 @@ import { PostCard } from '@/components/post-card';
  */
 export default function SavedScreen() {
   const router = useRouter();
-  const {
-    savedThreadIds,
-    savedPostIds,
-    createdThreads,
-    toggleSaved,
-    repliesFor,
-  } = useAppState();
+  const { savedPostIds } = useAppState();
+  const { savedThreads, savedThreadIds, toggleSaved } = useForums();
   const { posts } = useFeed();
 
   const [tab, setTab] = useState<'threads' | 'posts'>('threads');
 
-  const threads = savedThreadIds
-    .map(
-      (id) =>
-        createdThreads.find((thread) => thread.id === id) ?? findThread(id),
-    )
-    .filter((thread): thread is ForumThread => thread !== undefined);
+  // Real threads when there are any; otherwise the seeded ones a free
+  // account saved from the preview.
+  const threads =
+    savedThreads.length > 0
+      ? savedThreads
+      : savedThreadIds
+          .map((id) => findThread(id))
+          .filter((thread): thread is ForumThread => thread !== undefined);
 
   const savedPosts = savedPostIds
     .map((id) => posts.find((post) => post.id === id))
@@ -105,7 +103,7 @@ export default function SavedScreen() {
 
         {tab === 'threads' ? threads.map((thread) => {
           const category = findCategory(thread.categoryId);
-          const replyCount = thread.replies.length + repliesFor(thread.id).length;
+          const replyCount = replyCountOf(thread);
 
           return (
             <Pressable

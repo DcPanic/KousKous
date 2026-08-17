@@ -73,18 +73,6 @@ interface AppStateValue {
   isPostSaved: (postId: string) => boolean;
   toggleSavedPost: (postId: string) => void;
 
-  /** Threads the user keeps, so she can return to the conversation. */
-  savedThreadIds: string[];
-  isSaved: (threadId: string) => boolean;
-  toggleSaved: (threadId: string) => void;
-
-  /** Threads started in this session, newest first. */
-  createdThreads: ForumThread[];
-  addThread: (thread: ForumThread) => void;
-
-  repliesFor: (threadId: string) => ForumReply[];
-  addReply: (threadId: string, reply: ForumReply) => void;
-
   /** Messages sent in this session, per conversation. */
   sentMessages: (conversationId: string) => ChatMessage[];
   sendMessage: (conversationId: string, message: ChatMessage) => void;
@@ -117,15 +105,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     'followedCategories',
     DEFAULT_FOLLOWS,
   );
-  const [savedThreadIds, setSavedThreadIds] = usePersistedStringList('savedThreads');
   const [likedPostIds, setLikedPostIds] = usePersistedStringList('likedPosts');
   const [savedPostIds, setSavedPostIds] = usePersistedStringList('savedPosts');
   const [blockedNames, setBlockedNames] = usePersistedStringList('blockedNames');
   const [reportedPostIds, setReportedPostIds] = usePersistedStringList('reportedPosts');
   const [readNotificationIds, setReadNotificationIds] = usePersistedStringList('readNotifications');
   const [readConversationIds, setReadConversationIds] = usePersistedStringList('readConversations');
-  const [createdThreads, setCreatedThreads] = useState<ForumThread[]>([]);
-  const [replies, setReplies] = useState<Record<string, ForumReply[]>>({});
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
 
   const openDrawer = useCallback(() => setDrawerOpen(true), []);
@@ -231,20 +216,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     };
   }, [signedIn, user.id, setLikedPostIds, setSavedPostIds]);
 
-  const toggleSaved = useCallback((threadId: string) => {
-    setSavedThreadIds((prev) =>
-      prev.includes(threadId) ? prev.filter((item) => item !== threadId) : [threadId, ...prev],
-    );
-  }, []);
-
-  const addThread = useCallback((thread: ForumThread) => {
-    setCreatedThreads((prev) => [thread, ...prev]);
-  }, []);
-
-  const addReply = useCallback((threadId: string, reply: ForumReply) => {
-    setReplies((prev) => ({ ...prev, [threadId]: [...(prev[threadId] ?? []), reply] }));
-  }, []);
-
   const markNotificationRead = useCallback((id: string) => {
     setReadNotificationIds((prev) => (prev.includes(id) ? prev : [id, ...prev]));
   }, [setReadNotificationIds]);
@@ -303,13 +274,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       savedPostIds,
       isPostSaved: (postId: string) => savedPostIds.includes(postId),
       toggleSavedPost,
-      savedThreadIds,
-      isSaved: (threadId: string) => savedThreadIds.includes(threadId),
-      toggleSaved,
-      createdThreads,
-      addThread,
-      repliesFor: (threadId: string) => replies[threadId] ?? [],
-      addReply,
       sentMessages: (conversationId: string) => messages[conversationId] ?? [],
       sendMessage,
       readNotificationIds,
@@ -343,12 +307,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toggleLike,
       savedPostIds,
       toggleSavedPost,
-      savedThreadIds,
-      toggleSaved,
-      createdThreads,
-      addThread,
-      replies,
-      addReply,
       messages,
       sendMessage,
       readNotificationIds,

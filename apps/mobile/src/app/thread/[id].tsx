@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   KeyboardAvoidingView,
@@ -23,10 +23,10 @@ import {
 } from 'lucide-react-native';
 import { can, colors, findCategory, findLocation, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { findThread, type Attachment } from '@/data/forum';
+import { findThread, replyCountOf, type Attachment } from '@/data/forum';
 import { findPersonByName } from '@/data/people';
 import { pickMedia } from '@/lib/media';
-import { useAppState } from '@/state/app-state';
+import { useForums } from '@/state/forums';
 import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
 import { AttachmentGrid } from '@/components/attachments';
@@ -36,13 +36,33 @@ export default function ThreadScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useSession();
-  const { isSaved, toggleSaved, repliesFor, addReply, createdThreads } = useAppState();
+  const {
+    isSaved,
+    toggleSaved,
+    isLiked,
+    toggleLike,
+    repliesFor,
+    loadReplies,
+    addReply,
+    threadById,
+    loadThread,
+  } = useForums();
 
   const [draft, setDraft] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const threadId = typeof id === 'string' ? id : '';
-  const thread = createdThreads.find((item) => item.id === threadId) ?? findThread(threadId);
+  // A real thread comes from the provider; the seeded ones are the
+  // preview a free account sees, and open the same way.
+  const thread = threadById(threadId) ?? findThread(threadId);
+
+  useEffect(() => {
+    if (!threadId) return;
+    void loadThread(threadId);
+    void loadReplies(threadId);
+  }, [threadId, loadThread, loadReplies]);
 
   if (!thread) {
     return (
@@ -57,26 +77,32 @@ export default function ThreadScreen() {
   const category = findCategory(thread.categoryId);
   const author = findPersonByName(thread.author);
   const saved = isSaved(thread.id);
+  const liked = isLiked(thread.id);
   const canReply = can(user, 'forums_participate');
-  const replies = [...thread.replies, ...repliesFor(thread.id)];
+  // Loaded replies win; the seeded threads carry their own.
+  const loadedReplies = repliesFor(thread.id);
+  const replies = loadedReplies.length > 0 ? loadedReplies : thread.replies;
+  const replyCount = Math.max(replies.length, replyCountOf(thread));
 
   const attach = async (kind: 'image' | 'video') => {
     const picked = await pickMedia(kind);
     if (picked.length > 0) setAttachments((prev) => [...prev, ...picked]);
   };
 
-  const submit = () => {
-    if (draft.trim().length === 0 && attachments.length === 0) return;
+  const submit = async () => {
+    if ((draft.trim().length === 0 && attachments.length === 0) || sending) return;
 
-    addReply(thread.id, {
-      id: `local-${Date.now()}`,
-      author: user.name,
-      verified: user.is_verified,
-      timeAgo: 'μόλις τώρα',
-      body: draft.trim(),
-      likes: 0,
-      attachments,
-    });
+    setSending(true);
+    setError(null);
+
+    const ok = await addReply(thread.id, draft.trim());
+
+    setSending(false);
+
+    if (!ok) {
+      setError('Η απάντηση δεν στάλθηκε. Δοκίμασε ξανά.');
+      return;
+    }
 
     setDraft('');
     setAttachments([]);
@@ -149,19 +175,29 @@ export default function ThreadScreen() {
             <AttachmentGrid attachments={thread.attachments} />
 
             <View style={styles.stats}>
-              <View style={styles.stat}>
-                <Heart size={15} color={colors.pink} fill={colors.pinkTint} />
-                <Text style={styles.statLabel}>{thread.likes}</Text>
-              </View>
+              <Pressable
+                onPress={() => toggleLike(thread.id)}
+                style={styles.stat}
+                accessibilityRole="button"
+                accessibilityState={{ selected: liked }}
+                accessibilityLabel={liked ? 'Αφαίρεση like' : 'Μου αρέσει'}
+              >
+                <Heart
+                  size={15}
+                  color={colors.pink}
+                  fill={liked ? colors.pink : colors.pinkTint}
+                />
+                <Text style={styles.statLabel}>{thread.likes + (liked ? 1 : 0)}</Text>
+              </Pressable>
               <View style={styles.stat}>
                 <MessageCircle size={15} color={colors.textMuted} />
-                <Text style={styles.statLabel}>{replies.length}</Text>
+                <Text style={styles.statLabel}>{replyCount}</Text>
               </View>
             </View>
           </View>
 
           <Text style={styles.repliesHeading}>
-            {replies.length > 0 ? `${replies.length} απαντήσεις` : 'Καμία απάντηση ακόμα'}
+            {replyCount > 0 ? `${replyCount} απαντήσεις` : 'Καμία απάντηση ακόμα'}
           </Text>
 
           {replies.map((reply) => (
@@ -229,14 +265,16 @@ export default function ThreadScreen() {
                 multiline
               />
               <Pressable
-                onPress={submit}
-                style={styles.send}
+                onPress={() => void submit()}
+                disabled={sending}
+                style={[styles.send, sending && styles.sendDisabled]}
                 accessibilityRole="button"
                 accessibilityLabel="Αποστολή"
               >
                 <SendHorizontal size={17} color={colors.white} />
               </Pressable>
             </View>
+            {error ? <Text style={styles.error}>{error}</Text> : null}
           </View>
         ) : (
           <View style={styles.lockedComposer}>
@@ -444,6 +482,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.pink,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  sendDisabled: {
+    backgroundColor: colors.textInactive,
+  },
+  error: {
+    fontSize: 11.5,
+    fontFamily: font.bold,
+    color: colors.danger,
+    marginTop: spacing.sm,
   },
   lockedComposer: {
     backgroundColor: colors.surface,

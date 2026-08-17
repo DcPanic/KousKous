@@ -1,16 +1,17 @@
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { accessFor, colors, findCategory, layout, radii, shadows, spacing } from '@kouskous/shared';
+import { accessFor, categories, colors, layout, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { forums } from '@/data/mock';
 import { useAppState } from '@/state/app-state';
+import { useForums } from '@/state/forums';
 import { useSession } from '@/state/session';
 import { LockedOverlay } from '@/components/locked-overlay';
 import { SectionEyebrow } from '@/components/section-eyebrow';
 
 export default function CommunitiesScreen() {
-  const { user } = useSession();
+  const { user, signedIn } = useSession();
   const { isFollowing, toggleFollow } = useAppState();
+  const { activityFor } = useForums();
   const router = useRouter();
   const access = accessFor(user, 'forums_view');
   const locked = access === 'preview';
@@ -25,10 +26,11 @@ export default function CommunitiesScreen() {
       >
         <SectionEyebrow>Κοινότητες</SectionEyebrow>
         <View style={styles.grid}>
-          {forums.map((forum) => {
-            const category = findCategory(forum.categoryId);
-            if (!category) return null;
+          {categories.map((category) => {
             const following = isFollowing(category.id);
+            // Signed out there is nothing to count, so the card shows the
+            // community rather than a zero that is not true yet.
+            const activity = signedIn ? activityFor(category.id) : undefined;
 
             return (
               <Pressable
@@ -57,7 +59,13 @@ export default function CommunitiesScreen() {
                   </Pressable>
                 </View>
                 <Text style={styles.name}>{category.name}</Text>
-                <Text style={styles.posts}>{forum.posts}</Text>
+                <Text style={styles.posts}>
+                  {activity === undefined
+                    ? 'Κοινότητα'
+                    : activity === 1
+                      ? '1 δημοσίευση'
+                      : `${activity} δημοσιεύσεις`}
+                </Text>
               </Pressable>
             );
           })}
