@@ -253,6 +253,18 @@ export type OrderItemRow = {
   unit_price_cents: number;
 };
 
+export type ConversationRow = {
+  id: string;
+  created_at: string;
+};
+
+export type ConversationMemberRow = {
+  conversation_id: string;
+  profile_id: string;
+  /** Null until she opens it for the first time. */
+  last_read_at: string | null;
+};
+
 export type MessageRow = {
   id: string;
   conversation_id: string;
@@ -310,7 +322,9 @@ export interface Database {
         | 'subcategory_id'
         | 'price_cents'
       >;
-      messages: Table<MessageRow, 'id' | 'created_at' | 'body'>;
+      conversations: Table<ConversationRow, 'id' | 'created_at'>;
+      conversation_members: Table<ConversationMemberRow, 'last_read_at'>;
+      messages: Table<MessageRow, 'id' | 'created_at' | 'body' | 'media_path'>;
       rewards: Table<RewardRow, 'id' | 'created_at'>;
       post_media: Table<PostMediaRow, 'id' | 'position'>;
       post_likes: Table<PostLikeRow, 'created_at'>;

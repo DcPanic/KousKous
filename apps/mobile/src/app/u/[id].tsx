@@ -1,5 +1,14 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
@@ -10,7 +19,7 @@ import {
   Sparkles,
   UserPlus,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   colors,
   findCategory,
@@ -21,9 +30,10 @@ import {
   toGreekUpperCase,
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { conversations } from '@/data/chat';
 import { findPerson } from '@/data/people';
-import { useSession } from '@/state/session';
+import { fetchPostCount, fetchProfile, type PublicProfile } from '@/lib/profiles-repo';
+import { useChat } from '@/state/chat';
+import { useFeed } from '@/state/feed';
 import { Avatar } from '@/components/avatar';
 import { PlaceholderScreen } from '@/components/placeholder-screen';
 
@@ -33,12 +43,77 @@ const GRID_GAP = 2;
 export default function PersonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { user } = useSession();
+  const { openWith } = useChat();
+  const { posts } = useFeed();
   const { width } = useWindowDimensions();
 
   const [following, setFollowing] = useState(false);
+  const [profile, setProfile] = useState<PublicProfile | null>(null);
+  const [postCount, setPostCount] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+  const [opening, setOpening] = useState(false);
 
-  const person = typeof id === 'string' ? findPerson(id) : undefined;
+  const profileId = typeof id === 'string' ? id : '';
+  // Seeded ids belong to the signed-out preview; a real one is a uuid.
+  const seeded = findPerson(profileId);
+
+  const load = useCallback(async () => {
+    if (!profileId || seeded) {
+      setLoaded(true);
+      return;
+    }
+
+    const [found, count] = await Promise.all([
+      fetchProfile(profileId),
+      fetchPostCount(profileId),
+    ]);
+
+    setProfile(found);
+    setPostCount(count);
+    setLoaded(true);
+  }, [profileId, seeded]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // One shape for both, so the screen below does not branch.
+  const person = seeded
+    ? {
+        id: seeded.id,
+        name: seeded.name,
+        bio: seeded.bio,
+        avatarUrl: null as string | null,
+        location: seeded.location,
+        verified: seeded.verified,
+        host: seeded.host,
+        joined: seeded.joined,
+        posts: seeded.posts,
+        followers: seeded.followers,
+        following: seeded.following,
+        interests: seeded.interests,
+        grid: seeded.grid,
+      }
+    : profile
+      ? {
+          ...profile,
+          posts: postCount,
+          // Following is not stored yet, so the profile leaves the two
+          // counts out rather than inventing them.
+          followers: '—',
+          following: '—',
+          interests: [] as string[],
+          grid: [] as string[],
+        }
+      : null;
+
+  if (!person && !loaded) {
+    return (
+      <View style={[styles.screen, styles.centre]}>
+        <ActivityIndicator color={colors.pink} />
+      </View>
+    );
+  }
 
   if (!person) {
     return (
@@ -51,17 +126,22 @@ export default function PersonScreen() {
   }
 
   const tileSize = (width - GRID_GAP * (GRID_COLUMNS + 1)) / GRID_COLUMNS;
-  const place = findPlace(person.location);
+  const place = person.location ? findPlace(person.location) : undefined;
+  const herPosts = posts.filter((post) => post.authorId === person.id);
 
-  // Reuse an existing conversation when there is one, so the thread is not
-  // duplicated; otherwise the message button goes to the inbox.
-  const conversation = conversations.find((item) => item.name === person.name);
-
-  const message = () => {
-    if (conversation) {
-      router.push({ pathname: '/chat/[id]', params: { id: conversation.id } });
-    } else {
+  // Opens the thread the two already have, or starts one.
+  const message = async () => {
+    if (seeded || opening) {
       router.push('/chat');
+      return;
+    }
+
+    setOpening(true);
+    const conversationId = await openWith(person.id);
+    setOpening(false);
+
+    if (conversationId) {
+      router.push({ pathname: '/chat/[id]', params: { id: conversationId } });
     }
   };
 
@@ -83,7 +163,7 @@ export default function PersonScreen() {
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <View style={styles.top}>
-          <Avatar size={74} />
+          <Avatar size={74} uri={person.avatarUrl ?? undefined} />
           <View style={styles.stats}>
             <Stat value={String(person.posts)} label="posts" />
             <Stat value={person.followers} label="followers" />
@@ -107,8 +187,12 @@ export default function PersonScreen() {
         <Text style={styles.bio}>{person.bio}</Text>
 
         <View style={styles.metaRow}>
-          <MapPin size={13} color={colors.textMuted} />
-          <Text style={styles.meta}>{place?.name}</Text>
+          {place ? (
+            <>
+              <MapPin size={13} color={colors.textMuted} />
+              <Text style={styles.meta}>{place.name}</Text>
+            </>
+          ) : null}
           <CalendarDays size={13} color={colors.textMuted} />
           <Text style={styles.meta}>Μέλος από {person.joined}</Text>
         </View>
@@ -126,7 +210,8 @@ export default function PersonScreen() {
             </Text>
           </Pressable>
           <Pressable
-            onPress={message}
+            onPress={() => void message()}
+            disabled={opening}
             style={styles.messageButton}
             accessibilityRole="button"
             accessibilityLabel={`Στείλε μήνυμα στη ${person.name}`}
@@ -136,6 +221,8 @@ export default function PersonScreen() {
           </Pressable>
         </View>
 
+        {person.interests.length > 0 ? (
+          <>
         <Text style={styles.sectionTitle}>{toGreekUpperCase('Κοινότητες')}</Text>
         <View style={styles.chipWrap}>
           {person.interests.map((interestId) => {
@@ -156,6 +243,8 @@ export default function PersonScreen() {
             );
           })}
         </View>
+          </>
+        ) : null}
 
         <Text style={styles.sectionTitle}>{toGreekUpperCase('Δημοσιεύσεις')}</Text>
         <View style={styles.grid}>
@@ -165,7 +254,30 @@ export default function PersonScreen() {
               style={[styles.tile, { width: tileSize, height: tileSize, backgroundColor: tint }]}
             />
           ))}
+          {herPosts.map((post) =>
+            post.attachments?.[0]?.uri ? (
+              <Pressable
+                key={post.id}
+                onPress={() => router.push({ pathname: '/post/[id]', params: { id: post.id } })}
+                style={[styles.tile, { width: tileSize, height: tileSize }]}
+                accessibilityRole="button"
+                accessibilityLabel="Δημοσίευση"
+              >
+                <Image
+                  source={{ uri: post.attachments[0]?.uri }}
+                  style={styles.tileImage}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  transition={160}
+                />
+              </Pressable>
+            ) : null,
+          )}
         </View>
+
+        {person.grid.length === 0 && herPosts.length === 0 ? (
+          <Text style={styles.emptyGrid}>Καμία δημοσίευση ακόμα.</Text>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -184,6 +296,21 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.cream,
+  },
+  centre: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tileImage: {
+    width: '100%',
+    height: '100%',
+  },
+  emptyGrid: {
+    fontSize: 12.5,
+    fontFamily: font.regular,
+    color: colors.textMuted,
+    textAlign: 'center',
+    paddingVertical: spacing.xxl,
   },
   header: {
     flexDirection: 'row',

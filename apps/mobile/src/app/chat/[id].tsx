@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   KeyboardAvoidingView,
@@ -21,34 +21,31 @@ import {
 } from 'lucide-react-native';
 import { colors, findPlace, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { findConversation } from '@/data/chat';
-import { findPersonByName } from '@/data/people';
 import type { Attachment } from '@/data/forum';
 import { pickMedia } from '@/lib/media';
-import { useAppState } from '@/state/app-state';
-import { useSession } from '@/state/session';
+import { useChat } from '@/state/chat';
 import { Avatar } from '@/components/avatar';
 import { AttachmentGrid } from '@/components/attachments';
 import { PlaceholderScreen } from '@/components/placeholder-screen';
 
-/** Clock label for messages written in this session. */
-function nowLabel(): string {
-  const now = new Date();
-  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-}
-
 export default function ConversationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { user } = useSession();
-  const { sentMessages, sendMessage } = useAppState();
+  const { conversations, messagesFor, loadMessages, send, markConversationRead } = useChat();
 
   const [draft, setDraft] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const conversationId = typeof id === 'string' ? id : '';
-  const conversation = findConversation(conversationId);
-  const person = conversation ? findPersonByName(conversation.name) : undefined;
+  const conversation = conversations.find((item) => item.id === conversationId);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    void loadMessages(conversationId);
+    markConversationRead(conversationId);
+  }, [conversationId, loadMessages, markConversationRead]);
 
   if (!conversation) {
     return (
@@ -60,23 +57,28 @@ export default function ConversationScreen() {
     );
   }
 
-  const messages = [...conversation.messages, ...sentMessages(conversation.id)];
+  const messages = messagesFor(conversation.id);
+  const personId = conversation.personId;
 
   const attach = async (kind: 'image' | 'video') => {
     const picked = await pickMedia(kind);
     if (picked.length > 0) setAttachments((prev) => [...prev, ...picked]);
   };
 
-  const submit = () => {
-    if (draft.trim().length === 0 && attachments.length === 0) return;
+  const submit = async () => {
+    if ((draft.trim().length === 0 && attachments.length === 0) || sending) return;
 
-    sendMessage(conversation.id, {
-      id: `local-${Date.now()}`,
-      mine: true,
-      body: draft.trim(),
-      time: nowLabel(),
-      attachments,
-    });
+    setSending(true);
+    setError(null);
+
+    const ok = await send(conversation.id, draft.trim(), attachments[0]);
+
+    setSending(false);
+
+    if (!ok) {
+      setError('Το μήνυμα δεν στάλθηκε. Δοκίμασε ξανά.');
+      return;
+    }
 
     setDraft('');
     setAttachments([]);
@@ -96,14 +98,14 @@ export default function ConversationScreen() {
 
         <Pressable
           onPress={() =>
-            person ? router.push({ pathname: '/u/[id]', params: { id: person.id } }) : undefined
+            personId ? router.push({ pathname: '/u/[id]', params: { id: personId } }) : undefined
           }
-          disabled={!person}
+          disabled={!personId}
           style={styles.headerTap}
-          accessibilityRole={person ? 'button' : undefined}
-          accessibilityLabel={person ? `Προφίλ: ${conversation.name}` : undefined}
+          accessibilityRole={personId ? 'button' : undefined}
+          accessibilityLabel={personId ? `Προφίλ: ${conversation.name}` : undefined}
         >
-          <Avatar size={36} />
+          <Avatar size={36} uri={conversation.avatarUrl ?? undefined} />
 
           <View style={styles.headerText}>
             <View style={styles.headerNameRow}>
@@ -114,9 +116,7 @@ export default function ConversationScreen() {
                 <BadgeCheck size={13} color={colors.pink} fill={colors.pinkTint} />
               ) : null}
             </View>
-            <Text style={styles.headerMeta}>
-              {conversation.online ? 'Σε σύνδεση' : findPlace(conversation.location)?.name}
-            </Text>
+            <Text style={styles.headerMeta}>{findPlace(conversation.location)?.name}</Text>
           </View>
         </Pressable>
       </View>
@@ -186,14 +186,16 @@ export default function ConversationScreen() {
                 multiline
               />
               <Pressable
-                onPress={submit}
-                style={styles.send}
+                onPress={() => void submit()}
+                disabled={sending}
+                style={[styles.send, sending && styles.sendDisabled]}
                 accessibilityRole="button"
                 accessibilityLabel="Αποστολή"
               >
                 <SendHorizontal size={17} color={colors.white} />
               </Pressable>
             </View>
+            {error ? <Text style={styles.error}>{error}</Text> : null}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -204,6 +206,15 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.cream,
+  },
+  sendDisabled: {
+    backgroundColor: colors.textInactive,
+  },
+  error: {
+    fontSize: 11.5,
+    fontFamily: font.bold,
+    color: colors.danger,
+    marginTop: spacing.sm,
   },
   flex: {
     flex: 1,

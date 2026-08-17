@@ -1,16 +1,15 @@
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, BadgeCheck } from 'lucide-react-native';
 import { colors, findPlace, radii, shadows, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
-import { conversations } from '@/data/chat';
-import { useAppState } from '@/state/app-state';
+import { useChat } from '@/state/chat';
 import { Avatar } from '@/components/avatar';
 
 export default function ChatListScreen() {
   const router = useRouter();
-  const { readConversationIds, markConversationRead } = useAppState();
+  const { conversations, loading, refresh, markConversationRead } = useChat();
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -26,11 +25,15 @@ export default function ChatListScreen() {
         <Text style={styles.headerTitle}>Μηνύματα</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={colors.pink} />
+        }
+      >
           {conversations.map((conversation) => {
-            const unread = readConversationIds.includes(conversation.id)
-              ? 0
-              : conversation.unread;
+            const unread = conversation.unread;
 
             return (
             <Pressable
@@ -43,10 +46,7 @@ export default function ChatListScreen() {
               accessibilityRole="button"
               accessibilityLabel={`Συνομιλία με ${conversation.name}`}
             >
-              <View>
-                <Avatar size={48} />
-                {conversation.online ? <View style={styles.onlineDot} /> : null}
-              </View>
+              <Avatar size={48} uri={conversation.avatarUrl ?? undefined} />
 
               <View style={styles.rowText}>
                 <View style={styles.rowTop}>
@@ -75,6 +75,12 @@ export default function ChatListScreen() {
             </Pressable>
             );
           })}
+
+          {conversations.length === 0 && !loading ? (
+            <Text style={styles.empty}>
+              Καμία συνομιλία ακόμα. Άνοιξε το προφίλ μιας γυναίκας και στείλε της μήνυμα.
+            </Text>
+          ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -121,16 +127,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     boxShadow: shadows.card,
   },
-  onlineDot: {
-    position: 'absolute',
-    right: 1,
-    bottom: 1,
-    width: 12,
-    height: 12,
-    borderRadius: radii.full,
-    backgroundColor: colors.success,
-    borderWidth: 2,
-    borderColor: colors.surface,
+  empty: {
+    fontSize: 12.5,
+    fontFamily: font.regular,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 19,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xxl,
   },
   rowText: {
     flex: 1,

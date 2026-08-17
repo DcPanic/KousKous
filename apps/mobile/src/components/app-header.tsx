@@ -4,9 +4,11 @@ import { useRouter } from 'expo-router';
 import { colors, fontSizes, radii, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { useAppState } from '@/state/app-state';
+import { useChat } from '@/state/chat';
 
 export function AppHeader() {
-  const { openDrawer, unreadNotificationCount, unreadMessageCount } = useAppState();
+  const { openDrawer, unreadNotificationCount } = useAppState();
+  const { unreadCount: unreadMessageCount } = useChat();
   const router = useRouter();
 
   return (
