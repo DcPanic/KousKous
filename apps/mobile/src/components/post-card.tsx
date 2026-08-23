@@ -127,7 +127,7 @@ export function PostCard({ post, openable = true }: PostCardProps) {
         {post.hashtags.length > 0 ? <Text style={styles.hashtags}>{post.hashtags}</Text> : null}
 
         {post.attachments && post.attachments.length > 0 ? (
-          <AttachmentGrid attachments={post.attachments} height={230} />
+          <AttachmentGrid attachments={post.attachments} height={230} caption={post.caption} />
         ) : post.mediaCount > 0 ? (
           <DiagonalGradient colors={gradients.photo} style={styles.media}>
             {post.mediaCount > 1 ? (

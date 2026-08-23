@@ -17,6 +17,7 @@ import { colors } from '@kouskous/shared';
 import { AppStateProvider } from '@/state/app-state';
 import { ChatProvider } from '@/state/chat';
 import { ModerationProvider } from '@/state/moderation';
+import { LightboxProvider } from '@/components/lightbox';
 import { SocialProvider } from '@/state/social';
 import { EventsProvider } from '@/state/events';
 import { ForumsProvider } from '@/state/forums';
@@ -58,6 +59,7 @@ export default function RootLayout() {
           <ChatProvider>
           <SocialProvider>
           <ModerationProvider>
+          <LightboxProvider>
           <View style={styles.root}>
             <StatusBar style="dark" />
             <Stack
@@ -72,6 +74,7 @@ export default function RootLayout() {
             {/* Sits above the navigator so it can cover the tab bar. */}
             <DrawerMenu />
           </View>
+          </LightboxProvider>
           </ModerationProvider>
           </SocialProvider>
           </ChatProvider>

@@ -35,6 +35,7 @@ import { formatEventDate } from '@/lib/date';
 import { fetchEvent, type EventSummary } from '@/lib/events-repo';
 import { linkTo, shareLink } from '@/lib/share';
 import { useEvents } from '@/state/events';
+import { useLightbox } from '@/components/lightbox';
 import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
 import { DiagonalGradient } from '@/components/gradient';
@@ -44,6 +45,7 @@ export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useSession();
   const { events, hasJoined, toggleJoined } = useEvents();
+  const { open } = useLightbox();
   const [shareNote, setShareNote] = useState<string | null>(null);
   const [joinNote, setJoinNote] = useState<string | null>(null);
   const router = useRouter();
@@ -113,13 +115,20 @@ export default function EventDetailScreen() {
       >
         <DiagonalGradient colors={gradients.eventCover} style={styles.cover}>
           {event.coverUrl ? (
-            <Image
-              source={{ uri: event.coverUrl }}
+            <Pressable
+              onPress={() => open([{ uri: event.coverUrl as string, caption: event.title }])}
               style={styles.coverImage}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              transition={160}
-            />
+              accessibilityRole="button"
+              accessibilityLabel="Άνοιγμα φωτογραφίας"
+            >
+              <Image
+                source={{ uri: event.coverUrl }}
+                style={styles.coverFill}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={160}
+              />
+            </Pressable>
           ) : null}
           <SafeAreaView edges={['top']}>
             <View style={styles.coverBar}>
@@ -386,6 +395,10 @@ const styles = StyleSheet.create({
   // for a missing cover.
   coverImage: {
     ...StyleSheet.absoluteFill,
+  },
+  coverFill: {
+    width: '100%',
+    height: '100%',
   },
   joinNote: {
     fontSize: 11.5,

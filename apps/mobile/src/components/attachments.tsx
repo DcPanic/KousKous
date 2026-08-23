@@ -4,12 +4,15 @@ import { Play, X } from 'lucide-react-native';
 import { colors, radii, spacing } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import type { Attachment } from '@/data/forum';
+import { useLightbox } from './lightbox';
 
 interface AttachmentGridProps {
   attachments: Attachment[];
   /** Provided by composers, so a picked file can be taken back off. */
   onRemove?: (id: string) => void;
   height?: number;
+  /** Shown under the picture once it is open full-screen. */
+  caption?: string;
 }
 
 /**
@@ -17,20 +20,48 @@ interface AttachmentGridProps {
  * they fall back to a flat tint. Videos show a play badge — playback
  * arrives with media storage; this is the poster.
  */
-export function AttachmentGrid({ attachments, onRemove, height = 190 }: AttachmentGridProps) {
+export function AttachmentGrid({
+  attachments,
+  onRemove,
+  height = 190,
+  caption,
+}: AttachmentGridProps) {
+  const { open } = useLightbox();
+
   if (attachments.length === 0) return null;
 
   const single = attachments.length === 1;
 
-  const items = attachments.map((attachment) => (
-    <View
+  // Only pictures that exist can be opened; a seeded tint has nothing
+  // bigger behind it, and a video needs a player rather than a viewer.
+  const openable = attachments.filter(
+    (attachment) => attachment.uri && attachment.kind === 'image',
+  );
+
+  const items = attachments.map((attachment) => {
+    const canOpen = Boolean(attachment.uri) && attachment.kind === 'image';
+
+    return (
+    <Pressable
       key={attachment.id}
+      onPress={
+        canOpen
+          ? () =>
+              open(
+                openable.map((item) => ({ uri: item.uri as string, caption })),
+                openable.findIndex((item) => item.id === attachment.id),
+              )
+          : undefined
+      }
+      disabled={!canOpen}
       style={[
         styles.item,
         { height },
         single ? styles.itemFull : styles.itemScrolled,
         !attachment.uri && { backgroundColor: attachment.tint ?? colors.pinkTint },
       ]}
+      accessibilityRole={canOpen ? 'button' : undefined}
+      accessibilityLabel={canOpen ? 'Άνοιγμα φωτογραφίας' : undefined}
     >
       {attachment.uri ? (
         <Image
@@ -59,8 +90,9 @@ export function AttachmentGrid({ attachments, onRemove, height = 190 }: Attachme
           <X size={13} color={colors.white} />
         </Pressable>
       ) : null}
-    </View>
-  ));
+    </Pressable>
+    );
+  });
 
   if (single) return <View style={styles.singleWrap}>{items}</View>;
 
