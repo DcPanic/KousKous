@@ -75,7 +75,9 @@ export default function ThreadScreen() {
   }
 
   const category = findCategory(thread.categoryId);
-  const author = findPersonByName(thread.author);
+  // A real thread carries its author's account; the seeded ones are
+  // matched by name against the preview directory.
+  const authorId = thread.authorId ?? findPersonByName(thread.author)?.id ?? null;
   const saved = isSaved(thread.id);
   const liked = isLiked(thread.id);
   const canReply = can(user, 'forums_participate');
@@ -149,12 +151,14 @@ export default function ThreadScreen() {
           <View style={styles.opening}>
             <Pressable
               onPress={() =>
-                author ? router.push({ pathname: '/u/[id]', params: { id: author.id } }) : undefined
+                authorId
+                  ? router.push({ pathname: '/u/[id]', params: { id: authorId } })
+                  : undefined
               }
-              disabled={!author}
+              disabled={!authorId}
               style={styles.authorRow}
-              accessibilityRole={author ? 'button' : undefined}
-              accessibilityLabel={author ? `Προφίλ: ${thread.author}` : undefined}
+              accessibilityRole={authorId ? 'button' : undefined}
+              accessibilityLabel={authorId ? `Προφίλ: ${thread.author}` : undefined}
             >
               <Avatar size={38} />
               <View style={styles.authorText}>
@@ -202,7 +206,17 @@ export default function ThreadScreen() {
 
           {replies.map((reply) => (
             <View key={reply.id} style={styles.reply}>
-              <View style={styles.authorRow}>
+              <Pressable
+                onPress={() =>
+                  reply.authorId
+                    ? router.push({ pathname: '/u/[id]', params: { id: reply.authorId } })
+                    : undefined
+                }
+                disabled={!reply.authorId}
+                style={styles.authorRow}
+                accessibilityRole={reply.authorId ? 'button' : undefined}
+                accessibilityLabel={reply.authorId ? `Προφίλ: ${reply.author}` : undefined}
+              >
                 <Avatar size={30} />
                 <View style={styles.authorText}>
                   <View style={styles.authorNameRow}>
@@ -213,7 +227,7 @@ export default function ThreadScreen() {
                   </View>
                   <Text style={styles.muted}>{reply.timeAgo}</Text>
                 </View>
-              </View>
+              </Pressable>
               {reply.body.length > 0 ? <Text style={styles.replyBody}>{reply.body}</Text> : null}
               <AttachmentGrid attachments={reply.attachments} height={150} />
               <View style={styles.replyLikes}>

@@ -212,14 +212,27 @@ export async function fetchMyReactions(
 export async function fetchComments(postId: string): Promise<MockComment[]> {
   const { data, error } = await supabase
     .from('comments')
-    .select('id, body, created_at, author:profiles!comments_author_id_fkey (name)')
+    .select(
+      'id, body, created_at, author_id, author:profiles!comments_author_id_fkey (name, avatar_url)',
+    )
     .eq('post_id', postId)
     .order('created_at', { ascending: true });
 
   if (error || !data) throw error ?? new Error('comments unavailable');
 
-  return (data as unknown as { body: string; author: { name: string } | null }[]).map((row) => ({
+  const rows = data as unknown as {
+    id: string;
+    body: string;
+    author_id: string;
+    author: { name: string; avatar_url: string | null } | null;
+  }[];
+
+  // The author's account travels with the comment, so tapping her name
+  // opens the right profile instead of whoever shares it.
+  return rows.map((row) => ({
+    authorId: row.author_id,
     author: row.author?.name ?? 'Μέλος',
+    authorAvatarUrl: row.author?.avatar_url ?? null,
     text: row.body,
   }));
 }

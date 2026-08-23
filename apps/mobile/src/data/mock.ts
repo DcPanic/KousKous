@@ -31,7 +31,10 @@ export interface MockStory {
 }
 
 export interface MockComment {
+  /** Set on database rows; absent on seeded content. */
+  authorId?: string;
   author: string;
+  authorAvatarUrl?: string | null;
   text: string;
 }
 

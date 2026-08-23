@@ -61,10 +61,11 @@ export function PostCard({ post, openable = true }: PostCardProps) {
     if (result === 'copied') setShareNote('Ο σύνδεσμος αντιγράφηκε');
   };
 
-  // Only seeded authors have a profile page of their own.
-  const person = findPersonByName(post.author);
+  // A real post carries its author's account; the seeded ones are matched
+  // by name, which is all the preview directory has.
+  const authorId = post.authorId ?? findPersonByName(post.author)?.id ?? null;
   const openAuthor = () =>
-    person ? router.push({ pathname: '/u/[id]', params: { id: person.id } }) : undefined;
+    authorId ? router.push({ pathname: '/u/[id]', params: { id: authorId } }) : undefined;
 
   const category = post.categoryId ? findCategory(post.categoryId) : undefined;
   const subcategory = post.subcategoryId ? findSubcategory(post.subcategoryId) : undefined;
@@ -88,9 +89,9 @@ export function PostCard({ post, openable = true }: PostCardProps) {
     <View style={styles.row}>
       <Pressable
         onPress={openAuthor}
-        disabled={!person}
-        accessibilityRole={person ? 'button' : undefined}
-        accessibilityLabel={person ? `Προφίλ: ${post.author}` : undefined}
+        disabled={!authorId}
+        accessibilityRole={authorId ? 'button' : undefined}
+        accessibilityLabel={authorId ? `Προφίλ: ${post.author}` : undefined}
       >
         <Avatar size={38} uri={post.authorAvatarUrl ?? undefined} />
       </Pressable>
@@ -99,9 +100,9 @@ export function PostCard({ post, openable = true }: PostCardProps) {
         <View style={styles.headerLine}>
           <Pressable
             onPress={openAuthor}
-            disabled={!person}
+            disabled={!authorId}
             style={styles.nameRow}
-            accessibilityRole={person ? 'button' : undefined}
+            accessibilityRole={authorId ? 'button' : undefined}
           >
             <Text style={styles.name} numberOfLines={1}>
               {post.author}

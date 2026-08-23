@@ -109,9 +109,8 @@ export default function FriendsScreen() {
                     ) : null}
                   </View>
                   <Text style={styles.meta} numberOfLines={1}>
-                    {[person.location ? findPlace(person.location)?.name : null, person.bio]
-                      .filter(Boolean)
-                      .join(' · ')}
+                    {person.bio ||
+                      (person.location ? (findPlace(person.location)?.name ?? '') : '')}
                   </Text>
                 </View>
               </Pressable>

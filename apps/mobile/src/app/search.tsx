@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,7 +16,9 @@ import {
 } from '@kouskous/shared';
 import { font } from '@/theme/typography';
 import { people } from '@/data/people';
+import { searchProfiles, type PublicProfile } from '@/lib/profiles-repo';
 import { useEvents } from '@/state/events';
+import { useSession } from '@/state/session';
 import { Avatar } from '@/components/avatar';
 
 const MIN_QUERY = 2;
@@ -52,27 +54,65 @@ function shortDate(iso: string): string {
  * «ΑΘΗΝΑ» finds Αθήνα. Nothing here is a separate search per tab — a woman
  * types a word, she gets everything that word touches.
  */
+/** The seeded directory, widened to the shape a real profile has. */
+const PREVIEW_PEOPLE: PublicProfile[] = people.map((person) => ({
+  id: person.id,
+  name: person.name,
+  bio: person.bio,
+  avatarUrl: null,
+  location: person.location,
+  verified: person.verified,
+  host: person.host,
+  official: false,
+  joined: person.joined,
+}));
+
 export default function SearchScreen() {
   const router = useRouter();
   const { events } = useEvents();
+  const { signedIn } = useSession();
   const [query, setQuery] = useState('');
+  const [foundPeople, setFoundPeople] = useState<PublicProfile[]>([]);
 
   const term = normalizeForSearch(query);
   const active = term.length >= MIN_QUERY;
 
+  // Women are searched in the database, so the query is held back until
+  // typing pauses rather than firing on every keystroke.
+  useEffect(() => {
+    if (!signedIn || !active) {
+      setFoundPeople([]);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void searchProfiles(query.trim(), MAX_PER_GROUP).then((found) => {
+        if (!cancelled) setFoundPeople(found);
+      });
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [signedIn, active, query]);
+
   const matchedPeople = useMemo(() => {
     if (!active) return [];
-    return people
-      .filter((person) => {
-        const place = findPlace(person.location)?.name ?? '';
-        return (
-          normalizeForSearch(person.name).includes(term) ||
-          normalizeForSearch(person.bio).includes(term) ||
-          normalizeForSearch(place).includes(term)
-        );
-      })
-      .slice(0, MAX_PER_GROUP);
-  }, [term, active]);
+    // Signed out there is nobody to search, so the seeded directory
+    // stands in and is matched here instead.
+    if (signedIn) return foundPeople;
+
+    return PREVIEW_PEOPLE.filter((person) => {
+      const place = person.location ? (findPlace(person.location)?.name ?? '') : '';
+      return (
+        normalizeForSearch(person.name).includes(term) ||
+        normalizeForSearch(person.bio).includes(term) ||
+        normalizeForSearch(place).includes(term)
+      );
+    }).slice(0, MAX_PER_GROUP);
+  }, [term, active, signedIn, foundPeople]);
 
   const matchedCategories = useMemo(() => {
     if (!active) return [];
@@ -167,7 +207,7 @@ export default function SearchScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={`Προφίλ: ${person.name}`}
                   >
-                    <Avatar size={40} />
+                    <Avatar size={40} uri={person.avatarUrl ?? undefined} />
                     <View style={styles.rowText}>
                       <View style={styles.rowTitleLine}>
                         <Text style={styles.rowTitle}>{person.name}</Text>
@@ -176,7 +216,10 @@ export default function SearchScreen() {
                         ) : null}
                       </View>
                       <Text style={styles.rowMeta} numberOfLines={1}>
-                        {findPlace(person.location)?.name}
+                        {/* Her own words when she has written any; the
+                            place only stands in when she has not. */}
+                        {person.bio ||
+                          (person.location ? (findPlace(person.location)?.name ?? '') : '')}
                       </Text>
                     </View>
                   </Pressable>

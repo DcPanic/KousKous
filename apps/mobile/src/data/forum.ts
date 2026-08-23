@@ -18,6 +18,8 @@ export interface Attachment {
 
 export interface ForumReply {
   id: string;
+  /** Set on database rows; absent on seeded content. */
+  authorId?: string;
   author: string;
   verified: boolean;
   timeAgo: string;
@@ -29,6 +31,8 @@ export interface ForumReply {
 export interface ForumThread {
   id: string;
   categoryId: string;
+  /** Set on database rows; absent on seeded content. */
+  authorId?: string;
   author: string;
   verified: boolean;
   timeAgo: string;

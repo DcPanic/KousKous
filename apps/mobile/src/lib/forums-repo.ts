@@ -90,6 +90,7 @@ function toThread(row: ThreadRowJoined, urls: Map<string, string>): ForumThread 
   return {
     id: row.id,
     categoryId: row.category_id,
+    authorId: row.author_id,
     author: row.author?.name ?? 'Μέλος',
     verified: row.author?.is_verified ?? false,
     timeAgo: relativeTime(row.created_at),
@@ -110,6 +111,7 @@ function toThread(row: ThreadRowJoined, urls: Map<string, string>): ForumThread 
 function toReply(row: ReplyRowJoined, urls: Map<string, string>): ForumReply {
   return {
     id: row.id,
+    authorId: row.author_id,
     author: row.author?.name ?? 'Μέλος',
     verified: row.author?.is_verified ?? false,
     timeAgo: relativeTime(row.created_at),

@@ -99,3 +99,41 @@ export async function setPrivacy(
 
   if (error) throw error;
 }
+
+/**
+ * Women matching a search term.
+ *
+ * The match runs in Postgres rather than over a downloaded directory, so
+ * it works with any number of accounts. `discoverable` is honoured: a
+ * woman who has switched it off stays out of results without her profile
+ * becoming unreachable to anyone who already has her link. Blocked
+ * accounts never come back at all — `profiles_select` sees to that.
+ *
+ * ilike, not full-text search: Greek accents and the two-case rule make a
+ * text-search configuration a bigger decision than this screen needs, and
+ * the pattern below already matches the way women type.
+ */
+export async function searchProfiles(term: string, limit = 5): Promise<PublicProfile[]> {
+  const pattern = `%${term.replace(/[%_]/g, '')}%`;
+
+  const { data } = await supabase
+    .from('profiles')
+    .select(
+      'id, name, bio, avatar_url, location, is_verified, is_host, community_approved, is_official, show_location, created_at',
+    )
+    .eq('discoverable', true)
+    .or(`name.ilike.${pattern},bio.ilike.${pattern}`)
+    .limit(limit);
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    bio: row.bio ?? '',
+    avatarUrl: row.avatar_url,
+    location: row.show_location ? (row.location ?? '') : '',
+    verified: row.is_verified,
+    host: row.is_host && row.community_approved,
+    official: row.is_official,
+    joined: joinedLabel(row.created_at),
+  }));
+}

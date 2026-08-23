@@ -96,22 +96,22 @@ export default function PostScreen() {
           </Text>
 
           {comments.map((comment, index) => {
-            const person = findPersonByName(comment.author);
+            const authorId = comment.authorId ?? findPersonByName(comment.author)?.id ?? null;
             const key = `${comment.author}-${index}`;
             const likedComment = likedComments.includes(key);
             return (
               <View key={key} style={styles.comment}>
                 <Pressable
                   onPress={() =>
-                    person
-                      ? router.push({ pathname: '/u/[id]', params: { id: person.id } })
+                    authorId
+                      ? router.push({ pathname: '/u/[id]', params: { id: authorId } })
                       : undefined
                   }
-                  disabled={!person}
-                  accessibilityRole={person ? 'button' : undefined}
-                  accessibilityLabel={person ? `Προφίλ: ${comment.author}` : undefined}
+                  disabled={!authorId}
+                  accessibilityRole={authorId ? 'button' : undefined}
+                  accessibilityLabel={authorId ? `Προφίλ: ${comment.author}` : undefined}
                 >
-                  <Avatar size={32} />
+                  <Avatar size={32} uri={comment.authorAvatarUrl ?? undefined} />
                 </Pressable>
                 <View style={styles.commentBubble}>
                   <Text style={styles.commentAuthor}>{comment.author}</Text>
